@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fahrzeugkosten-Vergleich</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:wght@600;700&family=Source+Serif+4:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #f5f0e8;
+  --bg2:     #ede8de;
+  --bg3:     #e4ddd1;
+  --card:    #faf7f2;
+  --border:  #d4cbbf;
+  --border2: #c8bfb0;
+  --text:    #2c2416;
+  --text2:   #7a6e5f;
+  --text3:   #a8998a;
+  --benzin:  #c2410c;
+  --diesel:  #1d4ed8;
+  --phev:    #15803d;
+  --elektro: #6d28d9;
+  --leasing: #be123c;
+  --gold-l:  #d97706;
+  --winner:  #15803d;
+  --r: 10px;
+  --mono:    'DM Mono', monospace;
+  --serif:   'Source Serif 4', serif;
+  --display: 'Playfair Display', serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--serif);
+  min-height: 100vh;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+header {
+  background: var(--card); border-bottom: 2px solid var(--border2);
+  padding: 28px 48px; display: flex; align-items: baseline; gap: 20px;
+  box-shadow: 0 2px 12px rgba(44,36,22,0.06);
+}
+header h1 { font-family: var(--display); font-size: 1.75rem; font-weight: 700; letter-spacing: -0.3px; }
+header span { font-family: var(--mono); font-size: 0.72rem; color: var(--text3); letter-spacing: 0.08em; }
+.container { max-width: 1440px; margin: 0 auto; padding: 36px 48px 80px; }
+.section-title {
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--text3); margin-bottom: 18px;
+  display: flex; align-items: center; gap: 12px;
+}
+.section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+.input-group { display: flex; flex-direction: column; gap: 5px; }
+.input-group label { font-family: var(--mono); font-size: 0.68rem; color: var(--text2); letter-spacing: 0.04em; }
+.input-group input, .input-group select {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 7px;
+  color: var(--text); font-family: var(--mono); font-size: 0.88rem;
+  padding: 9px 13px; width: 100%; transition: border-color 0.15s, box-shadow 0.15s;
+  -moz-appearance: textfield; appearance: none;
+}
+.input-group input::-webkit-outer-spin-button,
+.input-group input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.input-group input:focus, .input-group select:focus {
+  outline: none; border-color: var(--gold-l); box-shadow: 0 0 0 3px rgba(217,119,6,0.12);
+}
+.unit { font-family: var(--mono); font-size: 0.65rem; color: var(--text3); }
+/* TOOLTIP */
+.tooltip-wrap { position: relative; display: inline-flex; align-items: center; gap: 5px; }
+.tip-icon {
+  width: 15px; height: 15px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 50%; font-size: 9px; display: inline-flex; align-items: center;
+  justify-content: center; cursor: help; color: var(--text3); font-family: var(--mono);
+  font-weight: 700; flex-shrink: 0;
+}
+.tip-box {
+  display: none; position: absolute; bottom: 125%; left: 0;
+  background: var(--card); border: 1px solid var(--border2); border-radius: 9px;
+  padding: 12px 16px; font-size: 0.72rem; font-family: var(--mono);
+  color: var(--text); width: 290px; z-index: 200; line-height: 1.6;
+  box-shadow: 0 8px 32px rgba(44,36,22,0.12);
+}
+.tip-box strong { color: var(--leasing); }
+.tooltip-wrap:hover .tip-box { display: block; }
+.global-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px; background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 24px; margin-bottom: 36px;
+  box-shadow: 0 2px 8px rgba(44,36,22,0.04);
+}
+.vehicles-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 16px; margin-bottom: 32px; }
+@media (max-width:1200px) { .vehicles-grid { grid-template-columns: repeat(3,1fr); } }
+@media (max-width:800px)  { .vehicles-grid { grid-template-columns: repeat(2,1fr); } .container { padding:20px; } header { padding:20px; } }
+.vehicle-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 20px; display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 2px 8px rgba(44,36,22,0.04); transition: box-shadow 0.2s;
+}
+.vehicle-card:hover { box-shadow: 0 4px 20px rgba(44,36,22,0.09); }
+.card-header { display:flex; align-items:center; gap:10px; padding-bottom:14px; border-bottom:1px solid var(--border); }
+.card-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.card-title { font-family:var(--display); font-size:1rem; font-weight:600; }
+.badge { margin-left:auto; font-family:var(--mono); font-size:0.58rem; padding:2px 7px; border-radius:4px; background:var(--bg3); color:var(--text3); border:1px solid var(--border); letter-spacing:0.06em; }
+.card-section { font-family:var(--mono); font-size:0.6rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--text3); margin-top:4px; }
+.range-group { display:flex; flex-direction:column; gap:6px; }
+.range-row { display:flex; align-items:center; gap:8px; }
+.range-row label { font-family:var(--mono); font-size:0.65rem; color:var(--text2); width:110px; flex-shrink:0; }
+.range-row label.sub { font-size:0.6rem; color:var(--text3); padding-left:10px; }
+.range-row input[type=range] { flex:1; accent-color:var(--gold-l); background:none; border:none; padding:0; height:4px; }
+.range-val { font-family:var(--mono); font-size:0.78rem; color:var(--text); width:34px; text-align:right; flex-shrink:0; }
+.range-row.disabled { opacity:0.4; pointer-events:none; }
+.foerderung-box { background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+.foerderung-result { display:flex; justify-content:space-between; align-items:center; padding-top:6px; border-top:1px solid var(--border); }
+.foerderung-amount { font-family:var(--mono); font-size:1.05rem; font-weight:500; }
+.type-btns { display:flex; gap:5px; flex-wrap:wrap; }
+.type-btn { font-family:var(--mono); font-size:0.62rem; padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg2); color:var(--text2); cursor:pointer; transition:all 0.15s; letter-spacing:0.04em; }
+.type-btn:hover { border-color:var(--text2); color:var(--text); }
+.type-btn.active { border-color:var(--leasing); color:var(--leasing); background:rgba(190,18,60,0.06); font-weight:500; }
+.calc-btn { display:block; width:100%; padding:16px; background:var(--text); color:var(--bg); border:none; border-radius:10px; font-family:var(--display); font-size:1.05rem; font-weight:700; cursor:pointer; letter-spacing:0.03em; transition:opacity 0.2s,transform 0.1s; margin-bottom:36px; }
+.calc-btn:hover { opacity:0.88; }
+.calc-btn:active { transform:scale(0.99); }
+.charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
+@media (max-width:900px) { .charts-grid { grid-template-columns:1fr; } }
+.chart-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:24px; box-shadow:0 2px 8px rgba(44,36,22,0.04); }
+.chart-title { font-family:var(--mono); font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text2); margin-bottom:20px; }
+.chart-wrap { position:relative; height:280px; }
+.chart-wrap-tall { position:relative; height:320px; }
+.table-wrap { background:var(--card); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:20px; box-shadow:0 2px 8px rgba(44,36,22,0.04); }
+table { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:0.78rem; }
+th { background:var(--bg3); padding:11px 16px; text-align:left; font-size:0.63rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text2); font-weight:500; border-bottom:1px solid var(--border2); }
+td { padding:10px 16px; border-bottom:1px solid var(--border); }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:var(--bg2); }
+td.num { text-align:right; }
+td.lbl { color:var(--text2); font-size:0.7rem; }
+td.bold { font-weight:600; color:var(--text); }
+td.winner { color:var(--winner); font-weight:600; }
+td.neg { color:var(--phev); }
+tr.divrow td { border-top:2px solid var(--border2); background:var(--bg2); }
+tr.leasing-only td { background: rgba(190,18,60,0.03); }
+tr.leasing-only td.lbl { color: var(--leasing); font-style: italic; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Fahrzeugkosten-Vergleich</h1>
+  <span>TCO · Energiekosten · Förderung 2026</span>
+</header>
+
+<div class="container">
+
+  <div class="section-title">Globale Parameter</div>
+  <div class="global-grid">
+    <div class="input-group"><label>Jahreskilometer</label><input type="number" id="g_km" value="15000"><span class="unit">km / Jahr</span></div>
+    <div class="input-group"><label>Haltedauer</label><input type="number" id="g_jahre" value="8" min="1" max="25"><span class="unit">Jahre</span></div>
+    <div class="input-group"><label>Benzinpreis</label><input type="number" id="g_benzin" value="2.05" step="0.01"><span class="unit">€ / Liter</span></div>
+    <div class="input-group"><label>Dieselpreis</label><input type="number" id="g_diesel" value="2.15" step="0.01"><span class="unit">€ / Liter</span></div>
+    <div class="input-group"><label>Netzstrom (Haushalt)</label><input type="number" id="g_netz" value="28" step="0.5"><span class="unit">ct / kWh</span></div>
+    <div class="input-group"><label>PV-Überschuss</label><input type="number" id="g_pv" value="8" step="0.5"><span class="unit">ct / kWh</span></div>
+    <div class="input-group"><label>Öffentlich Laden</label><input type="number" id="g_oeffentlich" value="55" step="1"><span class="unit">ct / kWh</span></div>
+  </div>
+
+  <div class="section-title">Fahrzeuge konfigurieren</div>
+  <div class="vehicles-grid">
+
+    <!-- BENZINER -->
+    <div class="vehicle-card">
+      <div class="card-header">
+        <div class="card-dot" style="background:var(--benzin)"></div>
+        <div class="card-title">Benziner</div>
+      </div>
+      <div class="input-group"><label>Fahrzeugpreis</label><input type="number" id="b_preis" value="28000"><span class="unit">€</span></div>
+      <div class="input-group"><label>Verbrauch</label><input type="number" id="b_verb" value="7.5" step="0.1"><span class="unit">l / 100 km</span></div>
+      <div class="input-group"><label>KFZ-Steuer</label><input type="number" id="b_steuer" value="180"><span class="unit">€ / Jahr</span></div>
+      <div class="input-group"><label>Versicherung</label><input type="number" id="b_versich" value="900"><span class="unit">€ / Jahr</span></div>
+      <div class="input-group"><label>Wartung</label><input type="number" id="b_wartung" value="800"><span class="unit">€ / Jahr</span></div>
+      <div class="input-group"><label>Restwert</label><input type="number" id="b_restwert" value="20" min="0" max="100"><span class="unit">% des Kaufpreises</span></div>
+    </div>
+
+    <!-- DIESEL -->
+    <div class="vehicle-card">
+      <div class="card-header">
+        <div class="card-dot" style="background:var(--diesel)"></div>
+        <div class="card-title">Diesel</div>
+      </div>
+      <div class="input-group"><label>Fahrzeugpreis</label><input type="number" id="d_preis" value="30000"><span class="unit">€</span></div>
+      <div class="input-group"><label>Verbrauch</label><input type="number" id="d_verb" value="5.5" step="0.1"><span class="unit">l / 100 km</span></div>
+      <div class="input-group"><label>KFZ-Steuer</label><input type="number" id="d_steuer" value="220"><span class="unit">€ / Jahr</span></div>
+      <div class="input-group"><label>Versicherung</label><input type="number" id="d_versich" value="950"><span class="unit">€ / Jahr</span></div>
+      <div class="input-group"><label>Wartung</label><input type="number" id="d_wartung" value="900"><span class="unit">€ / Jahr</span></div>
+      <div class="input-group"><label>Restwert</label><input type="number" id="d_restwert" value="20" min="0" max="100"><span class="unit">% des Kaufpreises</span></div>
+    </div>
+
+    <!-- PHEV -->
+    <div class="vehicle-card">
+      <div class="card-header">
+        <div class="card-dot" style="background:var(--phev)"></div>
+        <div class="card-title">Plug-in Hybrid</div>
+        <span class="badge">PHEV</span>
+      </div>
+      <div class="input-group"><label>Fahrzeugpreis</label><input type="number" id="p_preis" value="38000"><span class="unit">€</span></div>
+      <div class="input-group"><label>Benzinverbrauch (Verbrenner)</label><input type="number" id="p_bverb" value="5.5" step="0.1"><span class="unit">l / 100 km</span></div>
+      <div class="input-group"><label>Stromverbrauch (Elektro)</label><input type="number" id="p_sverb" value="20" step="0.1"><span class="unit">kWh / 100 km</span></div>
+      <div class="input-group"><label>Elektrischer Fahranteil</label><input type="number" id="p_eanteil" value="50" min="0" max="100"><span class="unit">%</span></div>
+      <div class="card-section">Ladeaufteilung</div>
+      <div class="range-group">
+        <div class="range-row"><label>Heimladen</label><input type="range" id="p_heim" min="0" max="100" value="85"><span class="range-val" id="p_heim_v">85%</span></div>
+        <div class="range-row"><label class="sub">↳ davon PV</label><input type="range" id="p_pv" min="0" max="100" value="60"><span class="range-val" id="p_pv_v">60%</span></div>
+        <div class="range-row disabled"><label>Öffentlich</label><input type="range" id="p_oeff" min="0" max="100" value="15" tabindex="-1"><span class="range-val" id="p_oeff_v">15%</span></div>
+      </div>
+      <div class="input-group"><label>KFZ-Steuer</label><input type="number" id="p_steuer" value="80"><span class="unit">€ / Jahr</span></div>
+      <div class="input-group"><label>Versicherung</label><input type="number" id="p_versich" value="1000"><span class="unit">€ / Jahr</span></div>
+      <div class="input-group"><label>Wartung</label><input type="number" id="p_wartung" value="700"><span class="unit">€ / Jahr</span></div>
+      <div class="input-group"><label>Restwert</label><input type="number" id="p_restwert" value="25" min="0" max="100"><span class="unit">% des Kaufpreises</span></div>
+      <div class="card-section">Förderung (PHEV)</div>
+      <div class="foerderung-box">
+        <div class="input-group">
+          <div class="tooltip-wrap">
+            <label>Haushaltseinkommen</label>
+            <span class="tip-icon">i<span class="tip-box"><strong>⚠ Zu versteuerndes Einkommen</strong> — nicht Bruttogehalt!<br><br>Faustregel: Bruttolohn × 0,8 ≈ zu versteuerndes Einkommen.<br><br>Genauen Wert im Einkommensteuerbescheid nachschauen.</span></span>
+          </div>
+          <select id="p_eink">
+            <option value="none">Kein Anspruch / über 90.000 €</option>
+            <option value="80k">60.001 – 80.000 €</option>
+            <option value="60k">45.001 – 60.000 €</option>
+            <option value="45k" selected>bis 45.000 €</option>
+          </select>
+        </div>
+        <div class="input-group"><label>Kinder unter 18 Jahren</label>
+          <select id="p_kinder"><option value="0">Keine</option><option value="1">1 Kind</option><option value="2">2 oder mehr Kinder</option></select>
+        </div>
+        <div class="foerderung-result">
+          <span style="font-family:var(--mono);font-size:0.68rem;color:var(--text2)">Förderung PHEV</span>
+          <span class="foerderung-amount" id="p_foerd_val" style="color:var(--phev)">3.500 €</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ELEKTRO -->
+    <div class="vehicle-card">
+      <div class="card-header">
+        <div class="card-dot" style="background:var(--elektro)"></div>
+        <div class="card-title">Elektro</div>
+        <span class="badge">BEV</span>
+      </div>
+      <div class="input-group"><label>Fahrzeugpreis</label><input type="number" id="e_preis" value="42000"><span class="unit">€</span></div>
+      <div class="input-group"><label>Verbrauch</label><input type="number" id="e_verb" value="20" step="0.1"><span class="unit">kWh / 100 km</span></div>
+      <div class="card-section">Ladeaufteilung</div>
+      <div class="range-group">
+        <div class="range-row"><label>Heimladen</label><input type="range" id="e_heim" min="0" max="100" value="90"><span class="range-val" id="e_heim_v">90%</span></div>
+        <div class="range-row"><label class="sub">↳ davon PV</label><input type="range" id="e_pv" min="0" max="100" value="70"><span class="range-val" id="e_pv_v">70%</span></div>
+        <div class="range-row disabled"><label>Öffentlich</label><input type="range" id="e_oeff" min="0" max="100" value="10" tabindex="-1"><span class="range-val" id="e_oeff_v">10%</span></div>
+      </div>
+      <div class="input-group"><label>KFZ-Steuer</label><input type="number" id="e_steuer" value="0"><span class="unit">€ / Jahr (aktuell befreit)</span></div>
+      <div class="input-group"><label>Versicherung</label><input type="number" id="e_versich" value="950"><span class="unit">€ / Jahr</span></div>
+      <div class="input-group"><label>Wartung</label><input type="number" id="e_wartung" value="400"><span class="unit">€ / Jahr</span></div>
+      <div class="input-group"><label>Restwert</label><input type="number" id="e_restwert" value="30" min="0" max="100"><span class="unit">% des Kaufpreises</span></div>
+      <div class="input-group"><label>THG-Prämie</label><input type="number" id="e_thg" value="250"><span class="unit">€ / Jahr</span></div>
+      <div class="card-section">Förderung (BEV)</div>
+      <div class="foerderung-box">
+        <div class="input-group">
+          <div class="tooltip-wrap">
+            <label>Haushaltseinkommen</label>
+            <span class="tip-icon">i<span class="tip-box"><strong>⚠ Zu versteuerndes Einkommen</strong> — nicht Bruttogehalt!<br><br>Faustregel: Bruttolohn × 0,8 ≈ zu versteuerndes Einkommen.<br><br>Genauen Wert im Einkommensteuerbescheid nachschauen.</span></span>
+          </div>
+          <select id="e_eink">
+            <option value="none">Kein Anspruch / über 90.000 €</option>
+            <option value="80k">60.001 – 80.000 €</option>
+            <option value="60k">45.001 – 60.000 €</option>
+            <option value="45k" selected>bis 45.000 €</option>
+          </select>
+        </div>
+        <div class="input-group"><label>Kinder unter 18 Jahren</label>
+          <select id="e_kinder"><option value="0">Keine</option><option value="1">1 Kind</option><option value="2">2 oder mehr Kinder</option></select>
+        </div>
+        <div class="foerderung-result">
+          <span style="font-family:var(--mono);font-size:0.68rem;color:var(--text2)">Förderung BEV</span>
+          <span class="foerderung-amount" id="e_foerd_val" style="color:var(--elektro)">5.000 €</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEASING -->
+    <div class="vehicle-card">
+      <div class="card-header">
+        <div class="card-dot" style="background:var(--leasing)"></div>
+        <div class="card-title">Leasing</div>
+        <span class="badge">monatlich</span>
+      </div>
+      <div class="card-section">Antriebsart</div>
+      <div class="type-btns">
+        <button class="type-btn" id="lb_benzin" onclick="setLeasingType('benzin')">⛽ Benzin</button>
+        <button class="type-btn" id="lb_diesel" onclick="setLeasingType('diesel')">🛢 Diesel</button>
+        <button class="type-btn" id="lb_phev"   onclick="setLeasingType('phev')">🔌 PHEV</button>
+        <button class="type-btn active" id="lb_elektro" onclick="setLeasingType('elektro')">⚡ Elektro</button>
+      </div>
+      <div class="input-group"><label>Monatliche Rate</label><input type="number" id="l_rate" value="399"><span class="unit">€ / Monat</span></div>
+      <div class="input-group"><label>Anzahlung / Sonderzahlung</label><input type="number" id="l_anz" value="2000"><span class="unit">€ (einmalig)</span></div>
+      <!-- Opportunitätskosten -->
+      <div class="input-group">
+        <div class="tooltip-wrap">
+          <label>Gesparter Kaufpreis</label>
+          <span class="tip-icon">i<span class="tip-box">Betrag, den Sie durch Leasing nicht im Fahrzeug binden. Dieses Kapital kann investiert werden und erwirtschaftet eine Rendite, die den effektiven Leasingkosten gegengerechnet wird.</span></span>
+        </div>
+        <input type="number" id="l_kapital" value="35000"><span class="unit">€ (nicht gebundenes Kapital)</span>
+      </div>
+      <div class="input-group">
+        <div class="tooltip-wrap">
+          <label>Jährl. Rendite</label>
+          <span class="tip-icon">i<span class="tip-box">Erwartete jährliche Rendite nach Steuern auf das gesparte Kapital (z.B. ETF-Portfolio). Der Zinseszinseffekt wird berücksichtigt.</span></span>
+        </div>
+        <input type="number" id="l_rendite" value="5" step="0.5"><span class="unit">% p.a. nach Steuern</span>
+      </div>
+
+      <!-- Einfacher Verbrauch -->
+      <div id="l_verb_simple">
+        <div class="input-group"><label id="l_verb_lbl">Verbrauch</label><input type="number" id="l_verb" value="20" step="0.1"><span class="unit" id="l_verb_unit">kWh / 100 km</span></div>
+      </div>
+      <!-- PHEV Verbrauch -->
+      <div id="l_verb_phev" style="display:none">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="input-group"><label>Benzinverbrauch (Verbrenner)</label><input type="number" id="l_bverb" value="5.5" step="0.1"><span class="unit">l / 100 km</span></div>
+          <div class="input-group"><label>Stromverbrauch (Elektro)</label><input type="number" id="l_sverb" value="20" step="0.1"><span class="unit">kWh / 100 km</span></div>
+          <div class="input-group"><label>Elektrischer Fahranteil</label><input type="number" id="l_eanteil" value="50" min="0" max="100"><span class="unit">%</span></div>
+        </div>
+      </div>
+      <!-- Ladeaufteilung (Elektro + PHEV) -->
+      <div id="l_laden_wrap">
+        <div class="card-section">Ladeaufteilung</div>
+        <div class="range-group">
+          <div class="range-row"><label>Heimladen</label><input type="range" id="l_heim" min="0" max="100" value="90"><span class="range-val" id="l_heim_v">90%</span></div>
+          <div class="range-row"><label class="sub">↳ davon PV</label><input type="range" id="l_pv" min="0" max="100" value="70"><span class="range-val" id="l_pv_v">70%</span></div>
+          <div class="range-row disabled"><label>Öffentlich</label><input type="range" id="l_oeff" min="0" max="100" value="10" tabindex="-1"><span class="range-val" id="l_oeff_v">10%</span></div>
+        </div>
+      </div>
+      <div class="input-group"><label>Versicherung</label><input type="number" id="l_versich" value="950"><span class="unit">€ / Jahr</span></div>
+      <div class="input-group"><label>Wartung</label><input type="number" id="l_wartung" value="0"><span class="unit">€ / Jahr (oft inkludiert)</span></div>
+      <!-- THG nur bei BEV -->
+      <div id="l_thg_wrap">
+        <div class="input-group"><label>THG-Prämie</label><input type="number" id="l_thg" value="250"><span class="unit">€ / Jahr</span></div>
+      </div>
+      <!-- Förderung bei BEV/PHEV Leasing -->
+      <div id="l_foerd_wrap">
+        <div class="card-section">Förderung (Leasing)</div>
+        <div class="foerderung-box">
+          <div class="input-group">
+            <div class="tooltip-wrap">
+              <label>Haushaltseinkommen</label>
+              <span class="tip-icon">i<span class="tip-box"><strong>⚠ Zu versteuerndes Einkommen</strong> — nicht Bruttogehalt!<br><br>Faustregel: Bruttolohn × 0,8 ≈ zu versteuerndes Einkommen.<br><br>Genauen Wert im Einkommensteuerbescheid nachschauen.</span></span>
+            </div>
+            <select id="l_eink">
+              <option value="none">Kein Anspruch / über 90.000 €</option>
+              <option value="80k">60.001 – 80.000 €</option>
+              <option value="60k">45.001 – 60.000 €</option>
+              <option value="45k" selected>bis 45.000 €</option>
+            </select>
+          </div>
+          <div class="input-group"><label>Kinder unter 18 Jahren</label>
+            <select id="l_kinder"><option value="0">Keine</option><option value="1">1 Kind</option><option value="2">2 oder mehr Kinder</option></select>
+          </div>
+          <div class="foerderung-result">
+            <span style="font-family:var(--mono);font-size:0.68rem;color:var(--text2)">Förderung Leasing</span>
+            <span class="foerderung-amount" id="l_foerd_val" style="color:var(--leasing)">5.000 €</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /vehicles-grid -->
+
+  <button class="calc-btn" onclick="berechnen()">Jetzt berechnen →</button>
+
+  <div id="results" style="display:none">
+    <div class="section-title">Ergebnisse</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">TCO Gesamt (inkl. Restwert)</div>
+        <div class="chart-wrap"><canvas id="cTCO"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Kostenaufteilung</div>
+        <div class="chart-wrap"><canvas id="cStack"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-bottom:20px">
+      <div class="chart-title">Kumulative Kosten über Zeit</div>
+      <div class="chart-wrap-tall"><canvas id="cLine"></canvas></div>
+    </div>
+    <div class="section-title">Detailtabelle</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Kostenposition</th>
+            <th style="color:var(--benzin)">Benziner</th>
+            <th style="color:var(--diesel)">Diesel</th>
+            <th style="color:var(--phev)">PHEV</th>
+            <th style="color:var(--elektro)">Elektro</th>
+            <th style="color:var(--leasing)" id="th_leasing">Leasing</th>
+          </tr>
+        </thead>
+        <tbody id="tBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// -------------------------------------------------------
+// STATE
+// -------------------------------------------------------
+var lType  = 'elektro';
+var charts = {};
+
+// -------------------------------------------------------
+// FÖRDERUNG TABELLEN
+// -------------------------------------------------------
+var tBEV = {
+  none: {0:0,    1:0,    2:0},
+  '80k':{0:3000, 1:3500, 2:4000},
+  '60k':{0:4000, 1:4500, 2:5000},
+  '45k':{0:5000, 1:5500, 2:6000}
+};
+var tPHEV = {
+  none: {0:0,    1:0,    2:0},
+  '80k':{0:1500, 1:2000, 2:2500},
+  '60k':{0:2500, 1:3000, 2:3500},
+  '45k':{0:3500, 1:4000, 2:4500}
+};
+
+function getFoerd(tbl, eink, kinder) {
+  var k = Math.min(parseInt(kinder) || 0, 2);
+  return (tbl[eink] || {})[k] || 0;
+}
+
+function updateFoerderung() {
+  var fE = getFoerd(tBEV,  document.getElementById('e_eink').value,   document.getElementById('e_kinder').value);
+  var fP = getFoerd(tPHEV, document.getElementById('p_eink').value,   document.getElementById('p_kinder').value);
+  document.getElementById('e_foerd_val').textContent = fE.toLocaleString('de-DE') + ' €';
+  document.getElementById('p_foerd_val').textContent = fP.toLocaleString('de-DE') + ' €';
+  updateLeasingFoerderung();
+}
+
+function updateLeasingFoerderung() {
+  var tbl  = (lType === 'elektro') ? tBEV : (lType === 'phev') ? tPHEV : null;
+  var fL   = tbl ? getFoerd(tbl, document.getElementById('l_eink').value, document.getElementById('l_kinder').value) : 0;
+  document.getElementById('l_foerd_val').textContent = fL.toLocaleString('de-DE') + ' €';
+}
+
+// -------------------------------------------------------
+// RANGE SLIDERS
+// -------------------------------------------------------
+function syncRange(prefix) {
+  var heim = parseInt(document.getElementById(prefix + '_heim').value);
+  var oeff = 100 - heim;
+  var pv   = parseInt(document.getElementById(prefix + '_pv').value);
+  document.getElementById(prefix + '_oeff').value         = oeff;
+  document.getElementById(prefix + '_heim_v').textContent = heim + '%';
+  document.getElementById(prefix + '_pv_v').textContent   = pv   + '%';
+  document.getElementById(prefix + '_oeff_v').textContent = oeff + '%';
+}
+
+function attachRange(prefix) {
+  document.getElementById(prefix + '_heim').addEventListener('input', function() { syncRange(prefix); });
+  document.getElementById(prefix + '_pv').addEventListener('input',   function() { syncRange(prefix); });
+}
+
+// -------------------------------------------------------
+// LEASING TYPE
+// -------------------------------------------------------
+function setLeasingType(t) {
+  lType = t;
+  ['benzin','diesel','phev','elektro'].forEach(function(x) {
+    document.getElementById('lb_' + x).classList.toggle('active', x === t);
+  });
+  var isPhev = (t === 'phev');
+  var isElek = (t === 'elektro' || isPhev);
+  var isBEV  = (t === 'elektro');
+  var hasFoerd = (isBEV || isPhev);
+
+  document.getElementById('l_verb_simple').style.display  = isPhev   ? 'none' : '';
+  document.getElementById('l_verb_phev').style.display    = isPhev   ? ''     : 'none';
+  document.getElementById('l_laden_wrap').style.display   = isElek   ? ''     : 'none';
+  document.getElementById('l_thg_wrap').style.display     = isBEV    ? ''     : 'none';
+  document.getElementById('l_foerd_wrap').style.display   = hasFoerd ? ''     : 'none';
+
+  if (!isPhev) {
+    document.getElementById('l_verb_unit').textContent = isBEV ? 'kWh / 100 km' : 'l / 100 km';
+    document.getElementById('l_verb').value = isBEV ? 20 : (t === 'benzin') ? 7.5 : 5.5;
+  }
+  updateLeasingFoerderung();
+}
+
+// -------------------------------------------------------
+// HELPERS
+// -------------------------------------------------------
+function v(id)    { return parseFloat(document.getElementById(id).value) || 0; }
+function fmt(n)   { return Math.round(n).toLocaleString('de-DE'); }
+function fmtE(n)  { return fmt(n) + ' €'; }
+function fmtKm(n) { return n.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €'; }
+
+function strompreis(prefix) {
+  var heim  = v(prefix + '_heim') / 100;
+  var pvSh  = v(prefix + '_pv')   / 100;
+  var oeff  = 1 - heim;
+  var pNetz = v('g_netz')        / 100;
+  var pPV   = v('g_pv')          / 100;
+  var pOeff = v('g_oeffentlich') / 100;
+  return heim * pvSh * pPV + heim * (1 - pvSh) * pNetz + oeff * pOeff;
+}
+
+// Compound interest on invested capital over N years
+function kapitalertrag(kapital, renditeProz, jahre) {
+  var r = renditeProz / 100;
+  return kapital * (Math.pow(1 + r, jahre) - 1);
+}
+
+// -------------------------------------------------------
+// CALCULATE
+// -------------------------------------------------------
+function berechnen() {
+  var km    = v('g_km');
+  var jahre = v('g_jahre');
+  var benzP = v('g_benzin');
+  var diesP = v('g_diesel');
+
+  // BENZINER
+  var bPreis   = v('b_preis');
+  var bRW      = bPreis * v('b_restwert') / 100;
+  var bEnergie = km / 100 * v('b_verb') * benzP * jahre;
+  var bFix     = (v('b_steuer') + v('b_versich') + v('b_wartung')) * jahre;
+  var bNetto   = bPreis - bRW;
+  var bTCO     = bNetto + bEnergie + bFix;
+
+  // DIESEL
+  var dPreis   = v('d_preis');
+  var dRW      = dPreis * v('d_restwert') / 100;
+  var dEnergie = km / 100 * v('d_verb') * diesP * jahre;
+  var dFix     = (v('d_steuer') + v('d_versich') + v('d_wartung')) * jahre;
+  var dNetto   = dPreis - dRW;
+  var dTCO     = dNetto + dEnergie + dFix;
+
+  // PHEV
+  var pPreis   = v('p_preis');
+  var pRW      = pPreis * v('p_restwert') / 100;
+  var pEA      = v('p_eanteil') / 100;
+  var pSP      = strompreis('p');
+  var pEnE     = km * pEA       / 100 * v('p_sverb') * pSP   * jahre;
+  var pEnB     = km * (1 - pEA) / 100 * v('p_bverb') * benzP * jahre;
+  var pEnergie = pEnE + pEnB;
+  var pFoerd   = getFoerd(tPHEV, document.getElementById('p_eink').value, document.getElementById('p_kinder').value);
+  var pFix     = (v('p_steuer') + v('p_versich') + v('p_wartung')) * jahre;
+  var pNetto   = pPreis - pRW - pFoerd;
+  var pTCO     = pNetto + pEnergie + pFix;
+
+  // ELEKTRO
+  var ePreis   = v('e_preis');
+  var eRW      = ePreis * v('e_restwert') / 100;
+  var eSP      = strompreis('e');
+  var eEnergie = km / 100 * v('e_verb') * eSP * jahre;
+  var eFoerd   = getFoerd(tBEV, document.getElementById('e_eink').value, document.getElementById('e_kinder').value);
+  var eThgGes  = v('e_thg') * jahre;
+  var eFix     = (v('e_steuer') + v('e_versich') + v('e_wartung')) * jahre;
+  var eNetto   = ePreis - eRW - eFoerd - eThgGes;
+  var eTCO     = eNetto + eEnergie + eFix;
+
+  // LEASING
+  var lRate    = v('l_rate');
+  var lAnz     = v('l_anz');
+  var lKap     = lAnz + lRate * 12 * jahre;
+  var lEnergie = 0;
+  if      (lType === 'benzin')  { lEnergie = km / 100 * v('l_verb') * benzP * jahre; }
+  else if (lType === 'diesel')  { lEnergie = km / 100 * v('l_verb') * diesP * jahre; }
+  else if (lType === 'elektro') { lEnergie = km / 100 * v('l_verb') * strompreis('l') * jahre; }
+  else if (lType === 'phev') {
+    var lEA = v('l_eanteil') / 100;
+    var lSP = strompreis('l');
+    lEnergie = (km * lEA / 100 * v('l_sverb') * lSP + km * (1 - lEA) / 100 * v('l_bverb') * benzP) * jahre;
+  }
+  var lThgGes   = (lType === 'elektro') ? v('l_thg') * jahre : 0;
+
+  // Leasing Förderung
+  var lFoerdTbl = (lType === 'elektro') ? tBEV : (lType === 'phev') ? tPHEV : null;
+  var lFoerd    = lFoerdTbl ? getFoerd(lFoerdTbl, document.getElementById('l_eink').value, document.getElementById('l_kinder').value) : 0;
+
+  var lFix      = (v('l_versich') + v('l_wartung')) * jahre - lThgGes;
+
+  // Opportunitätsertrag (Zinseszins auf gesparten Kaufpreis)
+  var lKapital    = v('l_kapital');
+  var lRendite    = v('l_rendite');
+  var lOppErtrag  = kapitalertrag(lKapital, lRendite, jahre);
+
+  var lTCO = lKap + lEnergie + lFix - lFoerd - lOppErtrag;
+
+  var lLbl = {benzin:'Benzin', diesel:'Diesel', phev:'PHEV', elektro:'Elektro'}[lType];
+
+  // ---- CHARTS ----
+  var labels  = ['Benziner', 'Diesel', 'PHEV', 'Elektro', 'Leasing\n('+lLbl+')'];
+  var colors  = ['#c2410c', '#1d4ed8', '#15803d', '#6d28d9', '#be123c'];
+  var colorsA = colors.map(function(c){ return c + '99'; });
+
+  var tcoArr  = [bTCO,     dTCO,     pTCO,     eTCO,     lTCO];
+  var netArr  = [bNetto,   dNetto,   pNetto,   eNetto,   lKap - lFoerd];
+  var enArr   = [bEnergie, dEnergie, pEnergie, eEnergie, lEnergie];
+  var fixArr  = [bFix,     dFix,     pFix,     eFix,     lFix];
+  var minTCO  = Math.min.apply(null, tcoArr);
+
+  var scaleX = { grid:{color:'#d4cbbf44'}, ticks:{color:'#7a6e5f', font:{family:"'DM Mono'", size:11}} };
+  var scaleY = { grid:{color:'#d4cbbf44'}, ticks:{color:'#7a6e5f', font:{family:"'DM Mono'", size:11}, callback:function(val){ return fmt(val)+' €'; }} };
+  var ttBase = { backgroundColor:'#faf7f2', borderColor:'#d4cbbf', borderWidth:1, titleColor:'#7a6e5f', bodyColor:'#2c2416', padding:10, cornerRadius:8 };
+
+  ['cTCO','cStack','cLine'].forEach(function(id){ if(charts[id]){ charts[id].destroy(); } });
+
+  // TCO Bar
+  charts['cTCO'] = new Chart(document.getElementById('cTCO'), {
+    type: 'bar',
+    data: { labels:labels, datasets:[{ data:tcoArr, backgroundColor:colorsA, borderColor:colors, borderWidth:2, borderRadius:6 }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend:{display:false},
+        tooltip:Object.assign({},ttBase,{callbacks:{
+          label:function(ctx){ return ' '+fmtE(ctx.parsed.y); },
+          afterLabel:function(ctx){ return ctx.parsed.y===minTCO ? ' ★ Günstigste Option' : ''; }
+        }})
+      },
+      scales:{ x:scaleX, y:scaleY }
+    }
+  });
+
+  // Stacked Bar – Leasing Opportunitätsertrag als negativer Datensatz
+  charts['cStack'] = new Chart(document.getElementById('cStack'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {label:'Kapitalkosten (netto)', data:netArr,  backgroundColor:colorsA, borderColor:colors, borderWidth:1, borderRadius:3},
+        {label:'Energiekosten',         data:enArr,   backgroundColor:'#d9770666', borderColor:'#d97706', borderWidth:1},
+        {label:'Fixkosten',             data:fixArr,  backgroundColor:'#78716c66', borderColor:'#78716c', borderWidth:1},
+        {label:'Kapitalertrag (Leasing)', data:[0,0,0,0,-lOppErtrag], backgroundColor:'#15803d55', borderColor:'#15803d', borderWidth:1}
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend:{display:true, labels:{color:'#7a6e5f', font:{family:"'DM Mono'",size:11}, boxWidth:12}},
+        tooltip:Object.assign({},ttBase,{callbacks:{label:function(ctx){ return ' '+ctx.dataset.label+': '+fmtE(ctx.parsed.y); }}})
+      },
+      scales:{ x:Object.assign({},scaleX,{stacked:true}), y:Object.assign({},scaleY,{stacked:true}) }
+    }
+  });
+
+  // Line – cumulative per year
+  var yrs = [];
+  for (var i = 0; i <= jahre; i++) { yrs.push(i); }
+
+  function cumKauf(startPreis, rw, enGes, fixGes) {
+    return yrs.map(function(y){
+      if (y === 0) return startPreis;
+      var c = startPreis + (enGes / jahre + fixGes / jahre) * y;
+      if (y === jahre) c -= rw;
+      return c;
+    });
+  }
+
+  var cumE = yrs.map(function(y){
+    if (y === 0) return ePreis - eFoerd;
+    var c = (ePreis - eFoerd) + (eEnergie / jahre + eFix / jahre - v('e_thg')) * y;
+    if (y === jahre) c -= eRW;
+    return c;
+  });
+
+  var cumL = yrs.map(function(y){
+    var leaseCost = lAnz + (lEnergie / jahre + lFix / jahre + lRate * 12) * y;
+    var opp = kapitalertrag(lKapital, lRendite, y);
+    return leaseCost - lFoerd - opp;
+  });
+
+  charts['cLine'] = new Chart(document.getElementById('cLine'), {
+    type: 'line',
+    data: {
+      labels: yrs.map(function(y){ return 'Jahr '+y; }),
+      datasets: [
+        {label:'Benziner', data:cumKauf(bPreis,          bRW, bEnergie, bFix), borderColor:'#c2410c', backgroundColor:'#c2410c0d', tension:0.3, pointRadius:3, fill:true},
+        {label:'Diesel',   data:cumKauf(dPreis,          dRW, dEnergie, dFix), borderColor:'#1d4ed8', backgroundColor:'#1d4ed80d', tension:0.3, pointRadius:3, fill:true},
+        {label:'PHEV',     data:cumKauf(pPreis - pFoerd, pRW, pEnergie, pFix), borderColor:'#15803d', backgroundColor:'#15803d0d', tension:0.3, pointRadius:3, fill:true},
+        {label:'Elektro',  data:cumE,                                           borderColor:'#6d28d9', backgroundColor:'#6d28d90d', tension:0.3, pointRadius:3, fill:true},
+        {label:'Leasing (inkl. Kapitalertrag)', data:cumL,                      borderColor:'#be123c', backgroundColor:'#be123c0d', tension:0.3, pointRadius:3, fill:true, borderDash:[6,3]}
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend:{display:true, labels:{color:'#7a6e5f', font:{family:"'DM Mono'",size:11}, boxWidth:14}},
+        tooltip:Object.assign({},ttBase,{callbacks:{label:function(ctx){ return ' '+ctx.dataset.label+': '+fmtE(ctx.parsed.y); }}})
+      },
+      scales:{ x:scaleX, y:scaleY }
+    }
+  });
+
+  // ---- TABLE ----
+  document.getElementById('th_leasing').textContent = 'Leasing ('+lLbl+')';
+
+  var dash = '—';
+  var trows = [
+    {lbl:'Kaufpreis / Leasing-Total',         v:[bPreis,    dPreis,    pPreis,    ePreis,    lKap]},
+    {lbl:'− Förderung',                       v:[0,         0,         -pFoerd,   -eFoerd,   -lFoerd],  neg:true},
+    {lbl:'− THG-Prämie (gesamt)',             v:[0,         0,         0,         -eThgGes,  -lThgGes], neg:true},
+    {lbl:'− Restwert',                        v:[-bRW,      -dRW,      -pRW,      -eRW,      0],        neg:true},
+    {lbl:'Kapitalkosten (netto)',              v:[bNetto,    dNetto,    pNetto,    eNetto,    lKap-lFoerd], bold:true, div:true},
+    {lbl:'Energiekosten (gesamt)',             v:[bEnergie,  dEnergie,  pEnergie,  eEnergie,  lEnergie]},
+    {lbl:'Fixkosten (gesamt)',                 v:[bFix,      dFix,      pFix,      eFix,      lFix]},
+    {lbl:'Kapitalertrag Leasing (Zinseszins)', v:[0,         0,         0,         0,         -lOppErtrag], neg:true, leasingOnly:true},
+    {lbl:'TCO Gesamt',                        v:[bTCO,      dTCO,      pTCO,      eTCO,      lTCO],     bold:true, div:true, hl:true},
+    {lbl:'TCO pro Jahr',                      v:[bTCO/jahre,dTCO/jahre,pTCO/jahre,eTCO/jahre,lTCO/jahre]},
+    {lbl:'TCO pro km',                        v:[bTCO/km/jahre,dTCO/km/jahre,pTCO/km/jahre,eTCO/km/jahre,lTCO/km/jahre], perKm:true}
+  ];
+
+  var tbody = document.getElementById('tBody');
+  tbody.innerHTML = '';
+  trows.forEach(function(row){
+    var tr = document.createElement('tr');
+    if (row.div)        tr.classList.add('divrow');
+    if (row.leasingOnly) tr.classList.add('leasing-only');
+    var html = '<td class="lbl' + (row.bold ? ' bold' : '') + '">' + row.lbl + '</td>';
+    var minVal = row.hl ? Math.min.apply(null, row.v) : null;
+    row.v.forEach(function(val, i){
+      var isMin = row.hl && val === minVal;
+      var isNeg = val < 0;
+      var isZero = val === 0 && (row.leasingOnly && i < 4);
+      var cls = ['num'];
+      if (row.bold)  cls.push('bold');
+      if (isMin)     cls.push('winner');
+      if (isNeg)     cls.push('neg');
+      var display;
+      if (isZero) {
+        display = '<span style="color:var(--text3)">—</span>';
+      } else if (row.perKm) {
+        display = (isNeg ? '−' : '') + fmtKm(Math.abs(val)) + (isMin ? ' ★' : '');
+      } else {
+        display = (isNeg ? '−' : '') + fmtE(Math.abs(val)) + (isMin ? ' ★' : '');
+      }
+      html += '<td class="' + cls.join(' ') + '">' + display + '</td>';
+    });
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('results').style.display = '';
+  setTimeout(function(){
+    document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+  }, 50);
+}
+
+// -------------------------------------------------------
+// INIT
+// -------------------------------------------------------
+attachRange('p');
+attachRange('e');
+attachRange('l');
+
+document.getElementById('e_eink').addEventListener('change',   updateFoerderung);
+document.getElementById('e_kinder').addEventListener('change', updateFoerderung);
+document.getElementById('p_eink').addEventListener('change',   updateFoerderung);
+document.getElementById('p_kinder').addEventListener('change', updateFoerderung);
+document.getElementById('l_eink').addEventListener('change',   updateLeasingFoerderung);
+document.getElementById('l_kinder').addEventListener('change', updateLeasingFoerderung);
+
+setLeasingType('elektro');
+updateFoerderung();
+</script>
+</body>
+</html>
