@@ -1,5 +1,191 @@
-<html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solarparty "Am Klucksgraben"</title>
+<style>
+  :root{
+    --sun: #F5A623;
+    --sun-deep: #E08E0B;
+    --sky: #1B2A3C;
+    --sky-light: #2E4258;
+    --cream: #FBF6EC;
+    --leaf: #4C8C4A;
+    --ink: #1B2A3C;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--sky);
+    color: var(--cream);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 50% -10%, var(--sun) 0%, rgba(245,166,35,0) 45%),
+      linear-gradient(180deg, var(--sky) 0%, var(--sky-light) 100%);
+    display: flex;
+    justify-content: center;
+    padding: 0 0 48px 0;
+  }
+
+  .page {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  header {
+    text-align: center;
+    padding: 44px 24px 28px;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--sun);
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-size: 32px;
+    line-height: 1.15;
+    margin: 0;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  h1 .place {
+    display: block;
+    color: var(--sun);
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  main {
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .card {
+    background: var(--cream);
+    color: var(--ink);
+    border-radius: 20px;
+    padding: 28px 24px 30px;
+    text-align: center;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: "";
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: var(--sun);
+    opacity: 0.15;
+  }
+
+  .card .date {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sun-deep);
+    margin-bottom: 6px;
+  }
+
+  .card h2 {
+    font-size: 20px;
+    margin: 0 0 20px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .qr-wrap {
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px;
+    display: inline-block;
+    box-shadow: inset 0 0 0 1px rgba(27,42,60,0.08);
+  }
+
+  .qr-wrap img {
+    display: block;
+    width: 220px;
+    height: 220px;
+    max-width: 100%;
+  }
+
+  .card a.fallback {
+    display: inline-block;
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--leaf);
+    word-break: break-all;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(76,140,74,0.4);
+  }
+
+  footer {
+    text-align: center;
+    padding: 30px 24px 0;
+    font-size: 12px;
+    color: rgba(251,246,236,0.55);
+  }
+
+  @media (max-width: 360px) {
+    h1 { font-size: 27px; }
+    .qr-wrap img { width: 190px; height: 190px; }
+  }
+</style>
+</head>
 <body>
-  Solarparties Am Klucksgraben
+  <div class="page">
+    <header>
+      <span class="eyebrow">Herzlich willkommen</span>
+      <h1>Solarparty<span class="place">"Am Klucksgraben"</span></h1>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="date">Samstag · 15. August</div>
+        <h2>Anmeldung für den 15.8., 10 Uhr</h2>
+        <div class="qr-wrap">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=440x440&data=https%3A%2F%2Fnuudel.digitalcourage.de%2FlKBGMbZ9uTx4pKeQ" alt="QR-Code Anmeldung 15.8., 10 Uhr" width="220" height="220" loading="lazy">
+        </div>
+        <a class="fallback" href="https://nuudel.digitalcourage.de/lKBGMbZ9uTx4pKeQ">nuudel.digitalcourage.de/lKBGMbZ9uTx4pKeQ</a>
+      </section>
+
+      <section class="card">
+        <div class="date">Dienstag · 18. August</div>
+        <h2>Anmeldung für den 18.8., 10 Uhr</h2>
+        <div class="qr-wrap">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=440x440&data=https%3A%2F%2Fnuudel.digitalcourage.de%2FZiW4wx3FyQLyx64S" alt="QR-Code Anmeldung 18.8., 10 Uhr" width="220" height="220" loading="lazy">
+        </div>
+        <a class="fallback" href="https://nuudel.digitalcourage.de/ZiW4wx3FyQLyx64S">nuudel.digitalcourage.de/ZiW4wx3FyQLyx64S</a>
+      </section>
+    </main>
+
+    <footer>
+      Einfach QR-Code scannen oder Link antippen, um sich anzumelden.
+    </footer>
+  </div>
 </body>
 </html>
