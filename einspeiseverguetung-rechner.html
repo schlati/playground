@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Einspeisevergütungsrechner · EEG ab 01.08.2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0f1214;
+    --panel: #171b1e;
+    --panel-raised: #1d2226;
+    --border: #2a3136;
+    --amber: #ffb703;
+    --amber-dim: #6b5620;
+    --teal: #2dd4bf;
+    --text: #e8e6e1;
+    --text-muted: #8b9198;
+    --text-faint: #565d63;
+    --danger: #ef7b6a;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height:100vh;
+    padding: 48px 24px 80px;
+  }
+
+  .wrap{max-width: 980px; margin: 0 auto;}
+
+  header{margin-bottom: 40px;}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin: 0 0 10px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:8px; height:8px;
+    background: var(--amber);
+    border-radius:1px;
+    display:inline-block;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size: clamp(28px, 4vw, 40px);
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .sub{
+    color: var(--text-muted);
+    font-size: 15px;
+    max-width: 60ch;
+    line-height:1.5;
+    margin:0;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 340px 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 800px){
+    .grid{grid-template-columns: 1fr;}
+  }
+
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+  }
+
+  .field{margin-bottom: 22px;}
+  .field:last-child{margin-bottom:0;}
+  label{
+    display:block;
+    font-size: 13px;
+    font-weight:600;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .hint{
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-top: 6px;
+    line-height:1.4;
+  }
+
+  .toggle-group{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .toggle-option{
+    border: 1px solid var(--border);
+    background: var(--panel-raised);
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .toggle-option:hover{border-color:#3a4248;}
+  .toggle-option.active{
+    border-color: var(--amber);
+    background: linear-gradient(180deg, rgba(255,183,3,0.10), rgba(255,183,3,0.03));
+  }
+  .toggle-option .t-title{
+    font-size:14px;
+    font-weight:600;
+    color: var(--text);
+  }
+  .toggle-option .t-desc{
+    font-size:12px;
+    color: var(--text-faint);
+  }
+
+  input[type=number]{
+    width:100%;
+    background: var(--panel-raised);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 16px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    outline:none;
+    transition: border-color 0.15s ease;
+  }
+  input[type=number]:focus{border-color: var(--amber);}
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{opacity:0.5;}
+
+  .unit-row{position:relative;}
+  .unit-row .unit{
+    position:absolute;
+    right:14px; top:50%;
+    transform:translateY(-50%);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--text-faint);
+    pointer-events:none;
+  }
+
+  .warning{
+    margin-top: 14px;
+    background: rgba(239,123,106,0.08);
+    border:1px solid rgba(239,123,106,0.35);
+    color: var(--danger);
+    font-size: 12.5px;
+    padding: 10px 12px;
+    border-radius: 7px;
+    line-height:1.4;
+    display:none;
+  }
+  .warning.show{display:block;}
+
+  /* staircase visual */
+  .stairs{
+    display:flex;
+    align-items:flex-end;
+    gap: 3px;
+    height: 150px;
+    margin: 6px 0 4px;
+  }
+  .stair-seg{
+    flex: 1 1 0;
+    background: var(--panel-raised);
+    border: 1px solid var(--border);
+    border-bottom:none;
+    border-radius: 4px 4px 0 0;
+    position:relative;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    transition: height 0.35s cubic-bezier(.2,.8,.2,1), background 0.25s ease, border-color 0.25s ease;
+  }
+  .stair-seg .rate-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 8px;
+    white-space:nowrap;
+  }
+  .stair-seg.filled{
+    background: linear-gradient(180deg, rgba(255,183,3,0.22), rgba(255,183,3,0.06));
+    border-color: var(--amber-dim);
+  }
+  .stair-seg.filled .rate-label{color: var(--amber);}
+  .stair-seg.partial{
+    background: linear-gradient(180deg, rgba(255,183,3,0.30), rgba(255,183,3,0.08));
+    border-color: var(--amber);
+  }
+  .stair-axis{
+    display:flex;
+    gap:3px;
+    margin-bottom: 28px;
+  }
+  .stair-axis span{
+    flex:1 1 0;
+    text-align:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  table{
+    width:100%;
+    border-collapse: collapse;
+    margin-top: 6px;
+  }
+  th, td{
+    text-align:left;
+    padding: 10px 8px;
+    font-size: 13.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  th{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color: var(--text-faint);
+    font-weight:500;
+  }
+  td.num, th.num{text-align:right; font-family:'IBM Plex Mono', monospace;}
+  tr:last-child td{border-bottom:none;}
+  tr.total td{
+    border-top: 1px solid var(--border);
+    font-weight:600;
+    color: var(--amber);
+    padding-top:14px;
+  }
+
+  .result-row{
+    display:flex;
+    gap:16px;
+    margin-top:20px;
+    flex-wrap:wrap;
+  }
+  .stat{
+    flex:1 1 200px;
+    background: var(--panel-raised);
+    border:1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .stat .stat-label{
+    font-size: 11.5px;
+    color: var(--text-faint);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    margin-bottom:8px;
+  }
+  .stat .stat-value{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 24px;
+    font-weight:600;
+    color: var(--text);
+  }
+  .stat .stat-value.accent{color: var(--amber);}
+  .stat .stat-value.teal{color: var(--teal);}
+  .stat .stat-value .stat-unit{
+    font-size:13px;
+    color: var(--text-faint);
+    margin-left:6px;
+    font-weight:400;
+  }
+
+  footer{
+    margin-top: 40px;
+    font-size: 12px;
+    color: var(--text-faint);
+    line-height:1.6;
+    border-top:1px solid var(--border);
+    padding-top: 18px;
+  }
+  footer code{
+    font-family:'IBM Plex Mono', monospace;
+    background: var(--panel-raised);
+    padding:1px 5px;
+    border-radius:4px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">EEG · gültig ab 01.08.2026</p>
+    <h1>Einspeisevergütungsrechner</h1>
+    <p class="sub">Feste Einspeisevergütung für PV-Anlagen bis 100 kWp — gestaffelt nach Anlagengröße. Trage deine Anlagenleistung ein, um den effektiven Vergütungssatz und die Aufteilung nach Tarifstufen zu sehen.</p>
+  </header>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="field">
+        <label>Anlagentyp</label>
+        <div class="toggle-group" id="typeToggle">
+          <div class="toggle-option active" data-type="gebaeude">
+            <span class="t-title">Gebäude / Lärmschutzwand</span>
+            <span class="t-desc">Gestaffelt: 7,70 / 6,66 / 5,44 ct/kWh</span>
+          </div>
+          <div class="toggle-option" data-type="sonstige">
+            <span class="t-title">Sonstige Anlagen</span>
+            <span class="t-desc">Einheitlich: 6,19 ct/kWh bis 100 kWp</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="kwpInput">Anlagenleistung</label>
+        <div class="unit-row">
+          <input type="number" id="kwpInput" value="12" min="0" step="0.1">
+          <span class="unit">kWp</span>
+        </div>
+        <div class="warning" id="capWarning">Diese Tabelle gilt nur bis 100 kWp. Für größere Anlagen greifen andere EEG-Regelungen (u. a. Pflicht zur Direktvermarktung).</div>
+      </div>
+
+      <div class="field">
+        <label for="yieldInput">Erwarteter Jahresertrag <span style="color:var(--text-faint); font-weight:400;">(optional)</span></label>
+        <div class="unit-row">
+          <input type="number" id="yieldInput" placeholder="z. B. 11000" min="0" step="10">
+          <span class="unit">kWh/a</span>
+        </div>
+        <p class="hint">Wird für die geschätzte jährliche Vergütung in € verwendet. Ohne Angabe wird nur der Satz in ct/kWh berechnet.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <label style="margin-bottom:16px;">Tarifstufen</label>
+      <div class="stair-axis" id="stairAxis"></div>
+      <div class="stairs" id="stairs"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Stufe</th>
+            <th class="num">Anteil</th>
+            <th class="num">Satz</th>
+            <th class="num">Vergütung/Jahr</th>
+          </tr>
+        </thead>
+        <tbody id="tierBody"></tbody>
+        <tbody>
+          <tr class="total">
+            <td>Effektiv gewichtet</td>
+            <td class="num" id="totalPortion">–</td>
+            <td class="num" id="totalRate">–</td>
+            <td class="num" id="totalRevenue">–</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="result-row">
+        <div class="stat">
+          <div class="stat-label">Effektiver Vergütungssatz</div>
+          <div class="stat-value accent" id="statRate">–<span class="stat-unit">ct/kWh</span></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Vergütung / Jahr</div>
+          <div class="stat-value teal" id="statRevenue">–<span class="stat-unit">€</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Basis: gesetzliche Festvergütung nach EEG, Sätze für Inbetriebnahme ab 01.08.2026. Innerhalb einer Anlage gilt die Staffelung <code>degressiv</code> pro kWp-Band — nicht der volle Satz auf die Gesamtleistung. Bei „Sonstige Anlagen“ (u. a. Freiflächenanlagen) gilt ein einheitlicher Satz bis 100 kWp. Keine Berücksichtigung von Marktwertabschlägen, Direktvermarktung oder Umsatzsteuer.
+  </footer>
+</div>
+
+<script>
+const TIERS = {
+  gebaeude: [
+    { from: 0,  to: 10,  rate: 7.70 },
+    { from: 10, to: 40,  rate: 6.66 },
+    { from: 40, to: 100, rate: 5.44 },
+  ],
+  sonstige: [
+    { from: 0, to: 100, rate: 6.19 },
+  ]
+};
+
+let currentType = 'gebaeude';
+
+const kwpInput = document.getElementById('kwpInput');
+const yieldInput = document.getElementById('yieldInput');
+const typeToggle = document.getElementById('typeToggle');
+const capWarning = document.getElementById('capWarning');
+const stairs = document.getElementById('stairs');
+const stairAxis = document.getElementById('stairAxis');
+const tierBody = document.getElementById('tierBody');
+
+typeToggle.addEventListener('click', (e) => {
+  const opt = e.target.closest('.toggle-option');
+  if (!opt) return;
+  currentType = opt.dataset.type;
+  [...typeToggle.children].forEach(c => c.classList.toggle('active', c === opt));
+  render();
+});
+
+kwpInput.addEventListener('input', render);
+yieldInput.addEventListener('input', render);
+
+function fmt(n, digits = 2) {
+  return n.toLocaleString('de-DE', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
+function computeBreakdown(kwpRaw, type) {
+  const kwp = Math.max(0, Math.min(kwpRaw, 100));
+  const tiers = TIERS[type];
+  const rows = [];
+  for (const tier of tiers) {
+    const portion = Math.max(0, Math.min(kwp, tier.to) - tier.from);
+    if (portion > 0) {
+      rows.push({ from: tier.from, to: tier.to, rate: tier.rate, portion });
+    }
+    if (kwp <= tier.to) break;
+  }
+  return rows;
+}
+
+function render() {
+  const kwpRaw = parseFloat(kwpInput.value) || 0;
+  const kwp = Math.max(0, Math.min(kwpRaw, 100));
+  const annualYield = parseFloat(yieldInput.value) || 0;
+  const tiers = TIERS[currentType];
+
+  capWarning.classList.toggle('show', kwpRaw > 100);
+
+  const rows = computeBreakdown(kwpRaw, currentType);
+  const totalPortion = rows.reduce((s, r) => s + r.portion, 0);
+  const weightedSum = rows.reduce((s, r) => s + r.portion * r.rate, 0);
+  const effectiveRate = totalPortion > 0 ? weightedSum / totalPortion : 0;
+  const annualRevenue = annualYield > 0 ? (annualYield * effectiveRate) / 100 : null;
+
+  // staircase
+  stairs.innerHTML = '';
+  stairAxis.innerHTML = '';
+  const maxRate = Math.max(...tiers.map(t => t.rate));
+  tiers.forEach(tier => {
+    const seg = document.createElement('div');
+    const bandWidth = tier.to - tier.from;
+    const portionInBand = Math.max(0, Math.min(kwp, tier.to) - tier.from);
+    const isFullyFilled = portionInBand >= bandWidth && portionInBand > 0;
+    const isPartiallyFilled = portionInBand > 0 && portionInBand < bandWidth;
+    seg.className = 'stair-seg' + (isFullyFilled ? ' filled' : isPartiallyFilled ? ' partial' : '');
+    const heightPct = (tier.rate / maxRate) * 100;
+    seg.style.height = heightPct + '%';
+    const label = document.createElement('div');
+    label.className = 'rate-label';
+    label.textContent = fmt(tier.rate) + ' ct';
+    seg.appendChild(label);
+    stairs.appendChild(seg);
+
+    const axisLabel = document.createElement('span');
+    axisLabel.textContent = tier.from + '–' + tier.to + ' kWp';
+    stairAxis.appendChild(axisLabel);
+  });
+
+  // table
+  tierBody.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const bandLabel = r.from + '–' + r.to + ' kWp';
+    const revenueCell = annualRevenue !== null && totalPortion > 0
+      ? fmt((r.portion / totalPortion) * annualYield * r.rate / 100) + ' €'
+      : '–';
+    tr.innerHTML = `
+      <td>${bandLabel}</td>
+      <td class="num">${fmt(r.portion, 2)} kWp</td>
+      <td class="num">${fmt(r.rate)} ct/kWh</td>
+      <td class="num">${revenueCell}</td>
+    `;
+    tierBody.appendChild(tr);
+  });
+
+  document.getElementById('totalPortion').textContent = fmt(totalPortion, 2) + ' kWp';
+  document.getElementById('totalRate').textContent = fmt(effectiveRate) + ' ct/kWh';
+  document.getElementById('totalRevenue').textContent = annualRevenue !== null ? fmt(annualRevenue) + ' €' : '–';
+
+  document.getElementById('statRate').innerHTML = fmt(effectiveRate) + '<span class="stat-unit">ct/kWh</span>';
+  document.getElementById('statRevenue').innerHTML = annualRevenue !== null ? fmt(annualRevenue) + '<span class="stat-unit">€</span>' : '–<span class="stat-unit">€</span>';
+}
+
+render();
+</script>
+</body>
+</html>
