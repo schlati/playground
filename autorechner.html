@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fahrzeugkosten-Vergleich</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:wght@600;700&family=Source+Serif+4:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:wght@600;700&family=Source+Serif+4:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg:      #f5f0e8;
@@ -25,7 +25,7 @@
   --gold-l:  #d97706;
   --winner:  #15803d;
   --r: 10px;
-  --mono:    'DM Mono', monospace;
+  --mono:    'Source Code Pro', monospace;
   --serif:   'Source Serif 4', serif;
   --display: 'Playfair Display', serif;
 }
@@ -370,6 +370,9 @@ tr.leasing-only td.lbl { color: var(--leasing); font-style: italic; }
   </div><!-- /vehicles-grid -->
 
   <button class="calc-btn" onclick="berechnen()">Jetzt berechnen →</button>
+  <div style="display:flex;justify-content:flex-end;margin-top:-24px;margin-bottom:36px">
+    <button id="permalink_btn" onclick="permalink()" style="background:none;border:none;cursor:pointer;font-family:var(--mono);font-size:0.72rem;color:var(--text3);padding:4px 2px;letter-spacing:0.04em;transition:color 0.15s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'">🔗 Permalink kopieren</button>
+  </div>
 
   <div id="results" style="display:none">
     <div class="section-title">Ergebnisse</div>
@@ -755,6 +758,62 @@ function berechnen() {
 }
 
 // -------------------------------------------------------
+// PERMALINK
+// -------------------------------------------------------
+var ALL_IDS = [
+  'g_km','g_jahre','g_benzin','g_diesel','g_netz','g_pv','g_oeffentlich',
+  'b_preis','b_verb','b_steuer','b_versich','b_wartung','b_restwert',
+  'd_preis','d_verb','d_steuer','d_versich','d_wartung','d_restwert',
+  'p_preis','p_bverb','p_sverb','p_eanteil','p_heim','p_pv','p_steuer','p_versich','p_wartung','p_restwert','p_eink','p_kinder',
+  'e_preis','e_verb','e_heim','e_pv','e_steuer','e_versich','e_wartung','e_restwert','e_thg','e_eink','e_kinder',
+  'l_rate','l_anz','l_kapital','l_rendite','l_verb','l_bverb','l_sverb','l_eanteil','l_heim','l_pv','l_versich','l_wartung','l_thg','l_eink','l_kinder'
+];
+
+function permalink() {
+  var params = new URLSearchParams();
+  params.set('ltype', lType);
+  ALL_IDS.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) params.set(id, el.value);
+  });
+  var url = window.location.pathname + '?' + params.toString();
+  // Copy to clipboard
+  navigator.clipboard.writeText(window.location.origin + url).then(function() {
+    var btn = document.getElementById('permalink_btn');
+    var orig = btn.textContent;
+    btn.textContent = '✓ Kopiert!';
+    btn.style.color = 'var(--winner)';
+    btn.style.borderColor = 'var(--winner)';
+    setTimeout(function() {
+      btn.textContent = orig;
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 2000);
+  }).catch(function() {
+    // Fallback: update address bar
+    history.replaceState(null, '', url);
+    alert('URL wurde in der Adressleiste aktualisiert – bitte manuell kopieren.');
+  });
+  history.replaceState(null, '', url);
+}
+
+function loadFromURL() {
+  var params = new URLSearchParams(window.location.search);
+  if (!params.has('g_km')) return; // no params, nothing to load
+  var lt = params.get('ltype');
+  if (lt) setLeasingType(lt);
+  ALL_IDS.forEach(function(id) {
+    if (params.has(id)) {
+      var el = document.getElementById(id);
+      if (el) el.value = params.get(id);
+    }
+  });
+  // Re-sync sliders display
+  ['p','e','l'].forEach(function(prefix) { syncRange(prefix); });
+  updateFoerderung();
+}
+
+// -------------------------------------------------------
 // INIT
 // -------------------------------------------------------
 attachRange('p');
@@ -770,6 +829,7 @@ document.getElementById('l_kinder').addEventListener('change', updateLeasingFoer
 
 setLeasingType('elektro');
 updateFoerderung();
+loadFromURL();
 </script>
 </body>
 </html>
