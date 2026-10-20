@@ -92,6 +92,10 @@ td:first-child{text-align:left}
 details summary{cursor:pointer;font:700 17px var(--f-display)}
 details[open] summary{margin-bottom:10px}
 .foot{font-size:12px;color:var(--muted);max-width:90ch}
+.calc{grid-column:1/-1;margin:0;font:600 12.5px var(--f-mono);color:var(--cell);background:var(--cell-soft);padding:8px 10px;border-radius:6px}
+input:disabled{opacity:.45}
+.bat td:first-child{font-weight:600}
+.bat tr.cur td{background:var(--sun-soft)}
 .perma{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .perma label{flex:1 1 260px;display:flex;gap:8px;align-items:center;color:var(--muted);font-size:13px}
 .perma input{flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:12px var(--f-mono);padding:7px 8px}
@@ -135,6 +139,7 @@ details[open] summary{margin-bottom:10px}
         <label>Investition PV<div class="in"><input id="inv" type="number" step="100"><span>€</span></div></label>
         <label>Betrieb/Versicherung<div class="in"><input id="opex" type="number" step="10"><span>€/a</span></div></label>
         <label class="chk"><input id="hasBat" type="checkbox"> Mit Batteriespeicher</label>
+        <label>Speichergröße nutzbar<div class="in"><input id="batKwh" type="number" step="0.5"><span>kWh</span></div></label>
         <label>Investition Speicher<div class="in"><input id="invBat" type="number" step="100"><span>€</span></div></label>
         <label>Speichertausch in Jahr<div class="in"><input id="batYear" type="number" step="1"><span>Jahr</span></div></label>
         <label>Kosten Speichertausch<div class="in"><input id="batCost" type="number" step="100"><span>€ heute</span></div></label>
@@ -145,9 +150,14 @@ details[open] summary{margin-bottom:10px}
       </fieldset>
       <fieldset>
         <legend>Verbrauch</legend>
-        <label>Jahresverbrauch<div class="in"><input id="verb" type="number" step="100"><span>kWh</span></div></label>
+        <label>Haushalt<div class="in"><input id="hh" type="number" step="100"><span>kWh/a</span></div></label>
+        <label>Wärmepumpe<div class="in"><input id="wp" type="number" step="100"><span>kWh/a</span></div></label>
+        <label>E-Auto<div class="in"><input id="car" type="number" step="100"><span>kWh/a</span></div></label>
+        <label>E-Auto tagsüber geladen<div class="in"><input id="carDay" type="number" step="5"><span>%</span></div></label>
+        <p class="calc" id="autOut"></p>
+        <label class="chk"><input id="autMan" type="checkbox"> Autarkie manuell vorgeben</label>
         <label>Autarkiegrad<div class="in"><input id="aut" type="number" step="1"><span>%</span></div></label>
-        <p class="hint">Autarkie = Anteil des Verbrauchs, den die PV deckt. Ohne Speicher meist 30–40 %, mit Speicher 55–70 %, mit WP im Winter eher am unteren Rand.</p>
+        <p class="hint">Ohne Haken wird die Autarkie berechnet: stündlich für einen typischen Tag je Monat (Ertragsprofil Leipzig, Haushalt nach Standardlastprofil, WP nach Heizperiode, Speicher mit 85 % Wirkungsgrad, wechselndes Wetter). Echte Tage schwanken stärker, das Ergebnis ist daher eher leicht optimistisch.</p>
       </fieldset>
       <fieldset>
         <legend>Preise</legend>
@@ -196,22 +206,68 @@ details[open] summary{margin-bottom:10px}
         <div class="tbl-wrap"><table class="sens" id="sens"></table></div>
       </div>
 
+      <div class="card">
+        <h2>Welche Speichergröße lohnt sich?</h2>
+        <p class="cap" id="batCap">Gleiche Anlage, Speicherkosten pro kWh wie oben eingestellt. Jede weitere kWh bringt weniger, weil nachts nur begrenzt Strom gebraucht wird.</p>
+        <div class="tbl-wrap"><table class="bat" id="batTbl"></table></div>
+      </div>
+
       <details class="card">
         <summary>Jahresübersicht</summary>
         <div class="tbl-wrap"><table id="yt"></table></div>
       </details>
 
-      <p class="foot">Vereinfachtes Modell: Eigenverbrauch = Verbrauch × Autarkie, höchstens so viel wie der Jahresertrag. Zahlungen am Jahresende. Kapitalwert diskontiert mit der ETF-Rendite. Strompreis, Ertrag und Autarkie sind die größten Hebel und sollten möglichst aus echten Daten stammen. Die Beispiele sind Annahmen, keine Angebote.</p>
+      <p class="foot">Vereinfachtes Modell: Eigenverbrauch aus einer Stundensimulation je typischem Monatstag (oder manuell: Verbrauch × Autarkie, höchstens der Jahresertrag). Speicheralterung bis zum Tausch nicht berücksichtigt. Zahlungen am Jahresende. Kapitalwert diskontiert mit der ETF-Rendite. Strompreis, Ertrag und Autarkie sind die größten Hebel und sollten möglichst aus echten Daten stammen. Die Beispiele sind Annahmen, keine Angebote.</p>
     </section>
   </div>
 </div>
 
 <script>
 const PRESETS={
-  eigenbau:{kwp:16,spez:830,deg:0.4,n:25,inv:11500,opex:120,hasBat:true,invBat:2500,batYear:15,batCost:2000,wrYear:13,wrCost:1800,infl:2,rest:0,verb:6200,aut:60,sp:30,spg:2,eeg:7.39,eegN:20,post:3,etf:7,tax:true},
-  installateur:{kwp:10,spez:950,deg:0.5,n:25,inv:15500,opex:150,hasBat:true,invBat:6500,batYear:15,batCost:4500,wrYear:13,wrCost:2500,infl:2,rest:0,verb:5000,aut:62,sp:32,spg:2,eeg:7.7,eegN:20,post:3,etf:7,tax:true},
-  ohne:{kwp:10,spez:950,deg:0.5,n:25,inv:11000,opex:120,hasBat:false,invBat:0,batYear:15,batCost:0,wrYear:13,wrCost:2500,infl:2,rest:0,verb:4500,aut:32,sp:32,spg:2,eeg:7.7,eegN:20,post:3,etf:7,tax:true}
+  eigenbau:{kwp:16,spez:830,deg:0.4,n:25,inv:11500,opex:120,hasBat:true,batKwh:10,invBat:2500,batYear:15,batCost:2000,wrYear:13,wrCost:1800,infl:2,rest:0,hh:2500,wp:2200,car:1500,carDay:50,autMan:false,aut:60,sp:30,spg:2,eeg:7.39,eegN:20,post:3,etf:7,tax:true},
+  installateur:{kwp:10,spez:950,deg:0.5,n:25,inv:15500,opex:150,hasBat:true,batKwh:10,invBat:6500,batYear:15,batCost:4500,wrYear:13,wrCost:2500,infl:2,rest:0,hh:3000,wp:3500,car:0,carDay:0,autMan:false,aut:55,sp:32,spg:2,eeg:7.7,eegN:20,post:3,etf:7,tax:true},
+  ohne:{kwp:10,spez:950,deg:0.5,n:25,inv:11000,opex:120,hasBat:false,batKwh:0,invBat:0,batYear:15,batCost:0,wrYear:13,wrCost:2500,infl:2,rest:0,hh:3500,wp:0,car:1000,carDay:30,autMan:false,aut:32,sp:32,spg:2,eeg:7.7,eegN:20,post:3,etf:7,tax:true}
 };
+
+/* Typtag-Simulation je Monat, stündlich */
+const norm=a=>{const s=a.reduce((x,y)=>x+y,0);return a.map(v=>v/s);};
+const DIM=[31,28,31,30,31,30,31,31,30,31,30,31];
+const PVS=norm([2.5,4.5,8,11.5,13,13.5,13.5,12,9,6,3.5,2.5]);
+const DL=[8.3,10,11.8,13.7,15.4,16.3,15.9,14.5,12.6,10.6,8.8,7.8];
+const NOON=[12.2,12.2,12.4,13.2,13.2,13.2,13.2,13.2,13.2,13.0,12.2,12.2];
+const PVH=DL.map((L,m)=>norm(Array.from({length:24},(_,h)=>{let w=0;for(let k=0;k<4;k++){const x=(h+(k+.5)/4-(NOON[m]-L/2))/L;if(x>0&&x<1)w+=Math.pow(Math.sin(Math.PI*x),1.4);}return w+1e-9;})));
+const HHP=norm([.6,.5,.45,.45,.45,.55,.9,1.2,1.1,1,1,1.05,1.15,1.05,.95,.9,1,1.25,1.5,1.55,1.4,1.2,.95,.75]);
+const HHMf=[1.15,1.1,1.05,.98,.93,.88,.87,.88,.93,1.02,1.1,1.15];
+const HHM=(()=>{const s=HHMf.reduce((a,f,m)=>a+f*DIM[m],0);return HHMf.map(f=>f/s);})(); /* Anteil pro Tag */
+const WPM=norm([16,14,12,7,3,2,2,2,3,7,13,17]);
+const WPH=norm([1.15,1.15,1.15,1.15,1.15,1.2,1.2,1.1,1,.95,.9,.85,.85,.85,.85,.85,.9,.95,1,1,1.05,1.1,1.1,1.15]);
+const SIM_K=0.8; /* Gleichzeitigkeit: kurze Lastspitzen innerhalb der Stunde */
+const CARD=[10,11,12,13,14,15],CARN=[18,19,20,21,22];
+/* Wetterabfolge über 10 Tage: S sonnig, M gemischt, D trüb; im Winter mehr trübe Tage */
+const SEQ_S=['S','M','S','D','M','S','M','D','S','M'],SEQ_W=['D','M','D','S','D','M','D','S','M','D'];
+const FAC={S:1.8,M:0.8,D:0.18};
+const SEQS=Array.from({length:12},(_,m)=>{const seq=[10,11,0,1].includes(m)?SEQ_W:SEQ_S;const mean=seq.reduce((a,t)=>a+FAC[t],0)/seq.length;return seq.map(t=>FAC[t]/mean);});
+function sim(Y,q,cap){
+  const se=Math.sqrt(0.85);let use=0,feed=0,load=0,soc=0;
+  for(let m=0;m<12;m++){
+    const pvM=Y*PVS[m]/DIM[m],hhD=q.hh*HHM[m],wpD=q.wp*WPM[m]/DIM[m],carD=q.car/365,cd=Math.min(1,Math.max(0,q.carDay/100));
+    const seq=SEQS[m];let u=0,f=0,l=0;
+    for(let pass=0;pass<2;pass++){u=0;f=0;l=0;
+     for(let d=0;d<seq.length;d++){const pvD=pvM*seq[d];
+      for(let h=0;h<24;h++){
+        let ld=hhD*HHP[h]+wpD*WPH[h];
+        if(CARD.includes(h))ld+=carD*cd/CARD.length;
+        if(CARN.includes(h))ld+=carD*(1-cd)/CARN.length;
+        const pv=pvD*PVH[m][h],dir=Math.min(pv,ld)*SIM_K;let sur=pv-dir,def=ld-dir;
+        const ch=Math.min(sur,Math.max(0,cap-soc)/se);soc+=ch*se;sur-=ch;
+        const dis=Math.min(def,soc*se);soc-=dis/se;def-=dis;
+        u+=dir+dis;f+=sur;l+=ld;}
+     }
+    }
+    const k=DIM[m]/seq.length;use+=u*k;feed+=f*k;load+=l*k;
+  }
+  return{use,feed,load};
+}
 const F=document.getElementById('f');
 const ids=Object.keys(PRESETS.eigenbau);
 const $=id=>document.getElementById(id);
@@ -229,8 +285,9 @@ function model(p,o={}){
   const rows=[];let cum=-I;
   for(let t=1;t<=N;t++){
     const Y=q.kwp*q.spez*Math.pow(1-q.deg/100,t-1);
-    const ev=Math.min(q.verb*q.aut/100,Y);
-    const fe=Y-ev;
+    const verb=q.hh+q.wp+q.car;let ev,fe;
+    if(q.autMan){ev=Math.min(verb*q.aut/100,Y);fe=Y-ev;}
+    else{const s=sim(Y,q,q.hasBat?q.batKwh:0);ev=s.use;fe=s.feed;}
     const price=q.sp/100*Math.pow(1+q.spg/100,t-1);
     const feed=(t<=q.eegN?q.eeg:q.post)/100;
     const sEv=ev*price,sFe=fe*feed;
@@ -256,7 +313,8 @@ function model(p,o={}){
   const finA=balA-Math.max(0,balA-Math.max(basisA,0))*taxRate;
   const balB=wB[wB.length-1];
   const finB=balB-Math.max(0,balB-I)*taxRate;
-  return{I,N,rows,irr,npv:npvAt(r),pay,wA,wB,finA,finB,sum:rows.reduce((a,x)=>a+x.cf,0)};
+  const verbT=q.hh+q.wp+q.car;
+  return{I,N,rows,irr,npv:npvAt(r),pay,wA,wB,finA,finB,sum:rows.reduce((a,x)=>a+x.cf,0),verb:verbT,aut1:verbT>0?rows[0].ev/verbT:0,evq:rows[0].Y>0?rows[0].ev/rows[0].Y:0};
 }
 
 function niceStep(range,count){const raw=range/count;const mag=Math.pow(10,Math.floor(Math.log10(raw)));const n=raw/mag;return(n<1.5?1:n<3?2:n<7?5:10)*mag;}
@@ -307,6 +365,20 @@ function drawSens(p){
   $('sens').innerHTML=s+'</tbody>';
 }
 
+function drawBat(p){
+  if(p.autMan){$('batTbl').innerHTML='<tbody><tr><td style="text-align:left;font-family:var(--f-body)">Bei manueller Autarkie nicht verfügbar. Haken bei „Autarkie manuell vorgeben“ entfernen.</td></tr></tbody>';return;}
+  const cpk=p.batKwh>0&&p.invBat>0?p.invBat/p.batKwh:400;
+  const rpk=p.batKwh>0&&p.batCost>0?p.batCost/p.batKwh:cpk*0.75;
+  const sizes=[...new Set([0,5,10,15,20,p.hasBat?p.batKwh:0])].sort((a,b)=>a-b);
+  const base=model(p,{hasBat:false,batKwh:0,invBat:0,batCost:0});
+  let s=`<thead><tr><th>Speicher</th><th>Kosten</th><th>Autarkie</th><th>Mehr Eigenverbr.</th><th>IRR gesamt</th><th>Kapitalwert</th><th>vs. ETF am Ende</th></tr></thead><tbody>`;
+  sizes.forEach(c=>{const m=model(p,{hasBat:c>0,batKwh:c,invBat:c*cpk,batCost:c*rpk});
+    const cur=(p.hasBat?p.batKwh:0)===c;const d=m.finA-m.finB;
+    s+=`<tr class="${cur?'cur':''}"><td>${c?c.toLocaleString('de-DE')+' kWh':'ohne'}${cur?' ◂':''}</td><td>${eur(c*cpk)}</td><td>${pct(m.aut1)}</td><td>+${Math.round(m.rows[0].ev-base.rows[0].ev).toLocaleString('de-DE')} kWh</td><td>${pct(m.irr)}</td><td class="${m.npv<0?'neg':''}">${eur(m.npv)}</td><td class="${d<0?'neg':''}">${d>=0?'+':''}${eur(d)}</td></tr>`;});
+  $('batTbl').innerHTML=s+'</tbody>';
+  $('batCap').textContent=`Gleiche Anlage, Speicher zu ${Math.round(cpk).toLocaleString('de-DE')} €/kWh (aus deinen Eingaben), Tausch zu ${Math.round(rpk).toLocaleString('de-DE')} €/kWh. Jede weitere kWh bringt weniger, weil nachts nur begrenzt Strom gebraucht wird.`;
+}
+
 function drawTable(m){
   let s='<thead><tr><th>Jahr</th><th>Ertrag kWh</th><th>Eigenverbr. kWh</th><th>Ersparnis</th><th>Einspeisung</th><th>Kosten</th><th>Cashflow</th><th>Kumuliert</th></tr></thead><tbody>';
   s+=`<tr><td>0</td><td></td><td></td><td></td><td></td><td class="neg">${eur(-m.I)}</td><td class="neg">${eur(-m.I)}</td><td class="neg">${eur(-m.I)}</td></tr>`;
@@ -328,8 +400,10 @@ function render(){
   const diff=m.finA-m.finB;
   $('verdict').innerHTML=`Im ersten Jahr bringt die Anlage <b>${eur(y1.sEv+y1.sFe)}</b> (davon ${eur(y1.sEv)} Stromersparnis, ${eur(y1.sFe)} Einspeisung). Über ${m.N} Jahre kommen <b>${eur(m.sum)}</b> netto zurück. `+
     (diff>=0?`Gegenüber dem ETF liegt die PV am Ende um <b>${eur(diff)}</b> vorn.`:`Ein ETF mit ${p.etf.toLocaleString('de-DE')} % wäre am Ende um <b>${eur(-diff)}</b> besser. Das Argument für die PV sind dann Preisstabilität und Unabhängigkeit, nicht die Rendite.`);
-  drawCf(m);drawW(m);drawSens(p);drawTable(m);
-  $('invBat').disabled=$('batYear').disabled=$('batCost').disabled=!p.hasBat;
+  drawCf(m);drawW(m);drawSens(p);drawBat(p);drawTable(m);
+  $('batKwh').disabled=$('invBat').disabled=$('batYear').disabled=$('batCost').disabled=!p.hasBat;
+  $('aut').disabled=!p.autMan;
+  $('autOut').textContent=`Gesamt ${Math.round(m.verb).toLocaleString('de-DE')} kWh/a · Autarkie ${pct(m.aut1)} · Eigenverbrauchsquote ${pct(m.evq)}`+(p.autMan?'':' (berechnet)');
   try{localStorage.setItem('pvw-inputs',JSON.stringify(p));}catch(e){}
   $('permaUrl').value=BASE+'#'+encode(p);try{history.replaceState(null,'','#'+encode(p));}catch(e){}$('permaOk').textContent='';
 }
