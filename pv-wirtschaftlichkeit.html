@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PV-Wirtschaftlichkeit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: zweispaltiges Werkzeug – links Parameter, rechts Ergebnis; auf dem Handy gestapelt */
+:root{
+  --bg:#eef2f5; --panel:#ffffff; --line:#d3dbe3; --ink:#15283d; --muted:#5b6b7c;
+  --cell:#1f4b78; --sun:#c97f00; --sun-soft:#fbefd6; --good:#1d7a4f; --bad:#b4442c;
+  --cell-soft:#e1eaf3;
+  --f-display:'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --f-body:'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  --f-mono:'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1720; --panel:#16212d; --line:#2a3a4b; --ink:#e4ebf2; --muted:#93a3b4;
+  --cell:#7fb0e0; --sun:#f0ae2e; --sun-soft:#3a2d12; --good:#5cc592; --bad:#ec8a72; --cell-soft:#1d2e40;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1720; --panel:#16212d; --line:#2a3a4b; --ink:#e4ebf2; --muted:#93a3b4;
+  --cell:#7fb0e0; --sun:#f0ae2e; --sun-soft:#3a2d12; --good:#5cc592; --bad:#ec8a72; --cell-soft:#1d2e40;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-block:28px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:22px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(26px,4vw,36px);margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1 span{color:var(--sun)}
+.sub{color:var(--muted);margin:4px 0 0;max-width:62ch}
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+.presets button{font:600 13px var(--f-body);border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 12px;border-radius:999px;cursor:pointer}
+.presets button:hover{border-color:var(--cell)}
+.presets button.on{background:var(--cell);color:var(--panel);border-color:var(--cell)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,370px) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.params{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 16px 14px}
+fieldset{border:0;border-bottom:1px solid var(--line);margin:0;padding:12px 0 14px;display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+fieldset:last-of-type{border-bottom:0}
+legend{font:600 11px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--sun);padding:8px 0 2px;float:left;width:100%;grid-column:1/-1}
+label{display:grid;gap:3px;font-size:13px;color:var(--muted);min-width:0}
+label.full{grid-column:1/-1}
+.in{display:flex;align-items:center;border:1px solid var(--line);border-radius:6px;background:var(--bg);overflow:hidden}
+.in input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:500 14px var(--f-mono);padding:7px 8px;font-variant-numeric:tabular-nums}
+.in span{font:12px var(--f-mono);color:var(--muted);padding:0 8px 0 2px;white-space:nowrap}
+.chk{display:flex;align-items:center;gap:8px;grid-column:1/-1;color:var(--ink);font-size:14px}
+.chk input{accent-color:var(--cell);width:16px;height:16px}
+.hint{grid-column:1/-1;font-size:12px;color:var(--muted);margin:0}
+.res{display:grid;gap:18px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+@media (max-width:620px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--panel);padding:14px 14px 12px;min-width:0}
+.kpi .l{font:600 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font:700 clamp(22px,3vw,30px) var(--f-display);margin-top:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+.pill{display:inline-block;font:600 11px var(--f-mono);padding:2px 7px;border-radius:999px;margin-top:6px}
+.pill.good{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.pill.bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.card h2{font:700 17px var(--f-display);margin:0 0 2px}
+.card p.cap{margin:0 0 10px;font-size:13px;color:var(--muted)}
+.chart{width:100%;height:auto;display:block}
+.chart text{font-family:var(--f-mono);font-size:11px;fill:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.verdict{background:var(--sun-soft);border-radius:10px;padding:14px 16px;font-size:15px}
+.verdict b{font-family:var(--f-display)}
+.compare{display:grid;gap:10px}
+.bar-row{display:grid;grid-template-columns:150px 1fr 110px;gap:10px;align-items:center;font-size:14px}
+@media (max-width:520px){.bar-row{grid-template-columns:110px 1fr 90px;font-size:13px}}
+.bar-track{height:18px;background:var(--cell-soft);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font:600 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right}
+th:first-child{text-align:left}
+td{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+td:first-child{text-align:left}
+.sens td{text-align:center;font-weight:600;border:1px solid var(--line)}
+.sens th{text-align:center}
+.neg{color:var(--bad)}
+details summary{cursor:pointer;font:700 17px var(--f-display)}
+details[open] summary{margin-bottom:10px}
+.foot{font-size:12px;color:var(--muted);max-width:90ch}
+.perma{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.perma label{flex:1 1 260px;display:flex;gap:8px;align-items:center;color:var(--muted);font-size:13px}
+.perma input{flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:12px var(--f-mono);padding:7px 8px}
+.perma button{font:600 13px var(--f-body);border:0;background:var(--sun);color:#1b1404;padding:8px 14px;border-radius:6px;cursor:pointer}
+.perma .ok{font-size:13px;color:var(--good);min-width:9ch}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>PV-Wirtschaftlichkeit <span>&middot;</span> Rechner</h1>
+      <p class="sub">Investition, Ertrag, Eigenverbrauch, Degradation und Ersatzteile über die Laufzeit. Mit Amortisation, interner Verzinsung (IRR) und einem fairen Vergleich mit einem ETF.</p>
+    </div>
+    <div class="presets" id="presets">
+      <button data-p="eigenbau">Beispiel: 16 kWp Eigenbau</button>
+      <button data-p="installateur">Beispiel: 10 kWp Installateur</button>
+      <button data-p="ohne">Beispiel: ohne Speicher</button>
+    </div>
+  </header>
+
+  <div class="perma">
+    <label for="permaUrl">Permalink<input id="permaUrl" type="text" readonly></label>
+    <button type="button" id="permaBtn">Link kopieren</button>
+    <span class="ok" id="permaOk" aria-live="polite"></span>
+  </div>
+
+  <div class="grid">
+    <form class="params" id="f" autocomplete="off">
+      <fieldset>
+        <legend>Anlage</legend>
+        <label>Leistung<div class="in"><input id="kwp" type="number" step="0.1"><span>kWp</span></div></label>
+        <label>Spez. Ertrag<div class="in"><input id="spez" type="number" step="10"><span>kWh/kWp</span></div></label>
+        <label>Degradation<div class="in"><input id="deg" type="number" step="0.1"><span>%/a</span></div></label>
+        <label>Laufzeit<div class="in"><input id="n" type="number" step="1"><span>Jahre</span></div></label>
+        <p class="hint">Süd ≈ 950–1.100, Ost/West ≈ 800–900, Süd/Nord gemischt ≈ 800–850 kWh/kWp (Mitteldeutschland).</p>
+      </fieldset>
+      <fieldset>
+        <legend>Kosten</legend>
+        <label>Investition PV<div class="in"><input id="inv" type="number" step="100"><span>€</span></div></label>
+        <label>Betrieb/Versicherung<div class="in"><input id="opex" type="number" step="10"><span>€/a</span></div></label>
+        <label class="chk"><input id="hasBat" type="checkbox"> Mit Batteriespeicher</label>
+        <label>Investition Speicher<div class="in"><input id="invBat" type="number" step="100"><span>€</span></div></label>
+        <label>Speichertausch in Jahr<div class="in"><input id="batYear" type="number" step="1"><span>Jahr</span></div></label>
+        <label>Kosten Speichertausch<div class="in"><input id="batCost" type="number" step="100"><span>€ heute</span></div></label>
+        <label>WR-Tausch in Jahr<div class="in"><input id="wrYear" type="number" step="1"><span>Jahr</span></div></label>
+        <label>Kosten WR-Tausch<div class="in"><input id="wrCost" type="number" step="100"><span>€ heute</span></div></label>
+        <label>Kostensteigerung<div class="in"><input id="infl" type="number" step="0.1"><span>%/a</span></div></label>
+        <label class="full">Restwert am Ende<div class="in"><input id="rest" type="number" step="100"><span>€</span></div></label>
+      </fieldset>
+      <fieldset>
+        <legend>Verbrauch</legend>
+        <label>Jahresverbrauch<div class="in"><input id="verb" type="number" step="100"><span>kWh</span></div></label>
+        <label>Autarkiegrad<div class="in"><input id="aut" type="number" step="1"><span>%</span></div></label>
+        <p class="hint">Autarkie = Anteil des Verbrauchs, den die PV deckt. Ohne Speicher meist 30–40 %, mit Speicher 55–70 %, mit WP im Winter eher am unteren Rand.</p>
+      </fieldset>
+      <fieldset>
+        <legend>Preise</legend>
+        <label>Strompreis<div class="in"><input id="sp" type="number" step="0.1"><span>ct/kWh</span></div></label>
+        <label>Preissteigerung<div class="in"><input id="spg" type="number" step="0.1"><span>%/a</span></div></label>
+        <label>Einspeisevergütung<div class="in"><input id="eeg" type="number" step="0.01"><span>ct/kWh</span></div></label>
+        <label>EEG-Laufzeit<div class="in"><input id="eegN" type="number" step="1"><span>Jahre</span></div></label>
+        <label class="full">Erlös nach EEG-Ende<div class="in"><input id="post" type="number" step="0.1"><span>ct/kWh</span></div></label>
+      </fieldset>
+      <fieldset>
+        <legend>Vergleich ETF</legend>
+        <label>ETF-Rendite<div class="in"><input id="etf" type="number" step="0.1"><span>%/a</span></div></label>
+        <label class="chk" style="grid-column:auto"><input id="tax" type="checkbox"> Abgeltungsteuer</label>
+        <p class="hint">Steuer auf ETF-Gewinne am Ende: 26,375 % mit 30 % Teilfreistellung (Aktien-ETF), effektiv ≈ 18,5 %. Eigenverbrauch und Einspeisung bis 30 kWp sind steuerfrei.</p>
+      </fieldset>
+    </form>
+
+    <section class="res" aria-live="polite">
+      <div class="kpis">
+        <div class="kpi"><div class="l">Investition</div><div class="v" id="kInv">–</div><div class="s" id="kInvS"></div></div>
+        <div class="kpi"><div class="l">Amortisation</div><div class="v" id="kPay">–</div><div class="s">nominal, ohne Zins</div></div>
+        <div class="kpi"><div class="l">Interne Verzinsung</div><div class="v" id="kIrr">–</div><div id="kIrrP"></div></div>
+        <div class="kpi"><div class="l">Kapitalwert</div><div class="v" id="kNpv">–</div><div class="s" id="kNpvS"></div></div>
+      </div>
+
+      <div class="verdict" id="verdict"></div>
+
+      <div class="card">
+        <h2>Kumulierter Cashflow</h2>
+        <p class="cap">Investition zu Beginn, danach Jahr für Jahr Ersparnis plus Einspeiseerlös minus Betriebs- und Tauschkosten.</p>
+        <svg class="chart" id="cfChart" viewBox="0 0 760 260" role="img" aria-label="Kumulierter Cashflow über die Laufzeit"></svg>
+        <div class="legend"><span><i style="background:var(--bad)"></i>noch nicht amortisiert</span><span><i style="background:var(--good)"></i>im Plus</span></div>
+      </div>
+
+      <div class="card">
+        <h2>Vermögen am Ende: PV gegen ETF</h2>
+        <p class="cap">Fairer Vergleich mit demselben Startkapital. Bei „PV“ wird jede jährliche Ersparnis sofort in den ETF gesteckt, bei „ETF“ geht die Investitionssumme direkt in den ETF.</p>
+        <svg class="chart" id="wChart" viewBox="0 0 760 240" role="img" aria-label="Vermögensentwicklung PV und ETF"></svg>
+        <div class="legend"><span><i style="background:var(--sun)"></i>PV, Ersparnisse angelegt</span><span><i style="background:var(--cell)"></i>Nur ETF</span></div>
+        <div class="compare" id="compare" style="margin-top:14px"></div>
+      </div>
+
+      <div class="card">
+        <h2>Sensitivität der internen Verzinsung</h2>
+        <p class="cap">Wie stark hängt das Ergebnis an Anlagenpreis und Strompreisentwicklung? Grün: schlägt die ETF-Rendite.</p>
+        <div class="tbl-wrap"><table class="sens" id="sens"></table></div>
+      </div>
+
+      <details class="card">
+        <summary>Jahresübersicht</summary>
+        <div class="tbl-wrap"><table id="yt"></table></div>
+      </details>
+
+      <p class="foot">Vereinfachtes Modell: Eigenverbrauch = Verbrauch × Autarkie, höchstens so viel wie der Jahresertrag. Zahlungen am Jahresende. Kapitalwert diskontiert mit der ETF-Rendite. Strompreis, Ertrag und Autarkie sind die größten Hebel und sollten möglichst aus echten Daten stammen. Die Beispiele sind Annahmen, keine Angebote.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+const PRESETS={
+  eigenbau:{kwp:16,spez:830,deg:0.4,n:25,inv:11500,opex:120,hasBat:true,invBat:2500,batYear:15,batCost:2000,wrYear:13,wrCost:1800,infl:2,rest:0,verb:6200,aut:60,sp:30,spg:2,eeg:7.39,eegN:20,post:3,etf:7,tax:true},
+  installateur:{kwp:10,spez:950,deg:0.5,n:25,inv:15500,opex:150,hasBat:true,invBat:6500,batYear:15,batCost:4500,wrYear:13,wrCost:2500,infl:2,rest:0,verb:5000,aut:62,sp:32,spg:2,eeg:7.7,eegN:20,post:3,etf:7,tax:true},
+  ohne:{kwp:10,spez:950,deg:0.5,n:25,inv:11000,opex:120,hasBat:false,invBat:0,batYear:15,batCost:0,wrYear:13,wrCost:2500,infl:2,rest:0,verb:4500,aut:32,sp:32,spg:2,eeg:7.7,eegN:20,post:3,etf:7,tax:true}
+};
+const F=document.getElementById('f');
+const ids=Object.keys(PRESETS.eigenbau);
+const $=id=>document.getElementById(id);
+const eur=v=>(v<0?'−':'')+Math.abs(Math.round(v)).toLocaleString('de-DE')+' €';
+const eurK=v=>(v<0?'−':'')+(Math.abs(v)/1000).toLocaleString('de-DE',{maximumFractionDigits:1,minimumFractionDigits:1})+' T€';
+const pct=v=>isFinite(v)?(v*100).toLocaleString('de-DE',{maximumFractionDigits:1,minimumFractionDigits:1})+' %':'–';
+
+function setInputs(p){ids.forEach(k=>{const el=$(k);if(el.type==='checkbox')el.checked=!!p[k];else el.value=p[k];});}
+function getInputs(){const p={};ids.forEach(k=>{const el=$(k);p[k]=el.type==='checkbox'?el.checked:(parseFloat(String(el.value).replace(',','.'))||0);});return p;}
+
+function model(p,o={}){
+  const q={...p,...o};
+  const I=q.inv+(q.hasBat?q.invBat:0);
+  const N=Math.max(1,Math.min(40,Math.round(q.n)));
+  const rows=[];let cum=-I;
+  for(let t=1;t<=N;t++){
+    const Y=q.kwp*q.spez*Math.pow(1-q.deg/100,t-1);
+    const ev=Math.min(q.verb*q.aut/100,Y);
+    const fe=Y-ev;
+    const price=q.sp/100*Math.pow(1+q.spg/100,t-1);
+    const feed=(t<=q.eegN?q.eeg:q.post)/100;
+    const sEv=ev*price,sFe=fe*feed;
+    const g=Math.pow(1+q.infl/100,t-1);
+    const opex=q.opex*g;
+    let repl=0;
+    if(t===Math.round(q.wrYear)&&t<N)repl+=q.wrCost*g;
+    if(q.hasBat&&t===Math.round(q.batYear)&&t<N)repl+=q.batCost*g;
+    let cf=sEv+sFe-opex-repl;
+    if(t===N)cf+=q.rest;
+    cum+=cf;
+    rows.push({t,Y,ev,fe,sEv,sFe,opex,repl,cf,cum});
+  }
+  const r=q.etf/100;
+  const npvAt=x=>rows.reduce((a,row)=>a+row.cf/Math.pow(1+x,row.t),-I);
+  let lo=-0.9,hi=1.5,irr=NaN;
+  if(npvAt(lo)*npvAt(hi)<0){for(let i=0;i<120;i++){const m=(lo+hi)/2;if(npvAt(m)>0)lo=m;else hi=m;}irr=(lo+hi)/2;}
+  let pay=null,prev=-I;
+  for(const row of rows){if(prev<0&&row.cum>=0){pay=row.t-1+(-prev)/(row.cum-prev);break;}prev=row.cum;}
+  const taxRate=q.tax?0.26375*0.7:0;
+  let balA=0,basisA=0;const wA=[0],wB=[I];
+  for(const row of rows){balA=balA*(1+r)+row.cf;basisA+=row.cf;wA.push(balA);wB.push(I*Math.pow(1+r,row.t));}
+  const finA=balA-Math.max(0,balA-Math.max(basisA,0))*taxRate;
+  const balB=wB[wB.length-1];
+  const finB=balB-Math.max(0,balB-I)*taxRate;
+  return{I,N,rows,irr,npv:npvAt(r),pay,wA,wB,finA,finB,sum:rows.reduce((a,x)=>a+x.cf,0)};
+}
+
+function niceStep(range,count){const raw=range/count;const mag=Math.pow(10,Math.floor(Math.log10(raw)));const n=raw/mag;return(n<1.5?1:n<3?2:n<7?5:10)*mag;}
+
+function drawCf(m){
+  const W=760,H=260,L=60,R=10,T=12,B=28;
+  const vals=[-m.I,...m.rows.map(r=>r.cum)];
+  let mn=Math.min(0,...vals),mx=Math.max(0,...vals);
+  const step=niceStep(mx-mn||1,5);mn=Math.floor(mn/step)*step;mx=Math.ceil(mx/step)*step;
+  const y=v=>T+(mx-v)/(mx-mn)*(H-T-B);
+  const n=vals.length,bw=(W-L-R)/n;
+  let s='';
+  for(let v=mn;v<=mx+1e-6;v+=step){s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="${v===0?1.5:1}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${eurK(v)}</text>`;}
+  vals.forEach((v,i)=>{const x=L+i*bw+bw*0.15,top=Math.min(y(v),y(0)),h=Math.abs(y(v)-y(0));
+    s+=`<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${(bw*0.7).toFixed(1)}" height="${Math.max(h,0.5).toFixed(1)}" rx="1.5" fill="${v<0?'var(--bad)':'var(--good)'}" opacity="${m.rows[i-1]&&m.rows[i-1].repl>0?0.55:0.9}"><title>Jahr ${i}: ${eur(v)}</title></rect>`;
+    if(i%5===0)s+=`<text x="${(L+i*bw+bw/2).toFixed(1)}" y="${H-8}" text-anchor="middle">${i}</text>`;});
+  if(m.pay!=null){const px=L+(m.pay+0.5)*bw;s+=`<line x1="${px}" x2="${px}" y1="${T}" y2="${H-B}" stroke="var(--sun)" stroke-dasharray="4 3" stroke-width="1.5"/><text x="${px+5}" y="${T+12}" style="fill:var(--sun);font-weight:600">Amortisiert nach ${m.pay.toLocaleString('de-DE',{maximumFractionDigits:1})} J.</text>`;}
+  $('cfChart').innerHTML=s;
+}
+
+function drawW(m){
+  const W=760,H=240,L=60,R=12,T=12,B=28;
+  const all=[...m.wA,...m.wB];let mn=Math.min(0,...all),mx=Math.max(...all);
+  const step=niceStep(mx-mn||1,5);mn=Math.floor(mn/step)*step;mx=Math.ceil(mx/step)*step;
+  const n=m.wA.length-1;const x=i=>L+i/n*(W-L-R);const y=v=>T+(mx-v)/(mx-mn)*(H-T-B);
+  let s='';
+  for(let v=mn;v<=mx+1e-6;v+=step)s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${eurK(v)}</text>`;
+  for(let i=0;i<=n;i+=5)s+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${i}</text>`;
+  const path=a=>a.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  s+=`<path d="${path(m.wA)} L${x(n)},${y(Math.max(mn,0))} L${x(0)},${y(Math.max(mn,0))}Z" fill="var(--sun)" opacity="0.1"/>`;
+  s+=`<path d="${path(m.wB)}" fill="none" stroke="var(--cell)" stroke-width="2.5"/>`;
+  s+=`<path d="${path(m.wA)}" fill="none" stroke="var(--sun)" stroke-width="2.5"/>`;
+  s+=`<circle cx="${x(n)}" cy="${y(m.wA[n])}" r="4" fill="var(--sun)"/><circle cx="${x(n)}" cy="${y(m.wB[n])}" r="4" fill="var(--cell)"/>`;
+  $('wChart').innerHTML=s;
+  const max=Math.max(m.finA,m.finB,1);
+  const row=(name,v,c)=>`<div class="bar-row"><span>${name}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(0,v/max*100)}%;background:${c}"></div></div><span class="num">${eur(v)}</span></div>`;
+  $('compare').innerHTML=row('PV + Ersparnis im ETF',m.finA,'var(--sun)')+row('Nur ETF',m.finB,'var(--cell)')+
+   `<div class="bar-row"><span><b>Differenz</b></span><span></span><span class="num ${m.finA-m.finB<0?'neg':''}"><b>${m.finA-m.finB>=0?'+':''}${eur(m.finA-m.finB)}</b></span></div>`;
+}
+
+function drawSens(p){
+  const f=[0.8,0.9,1,1.1,1.2],g=[0,1,2,3,4];
+  let s='<thead><tr><th>Preis \\ Strompreis +</th>'+g.map(v=>`<th>${v} %/a</th>`).join('')+'</tr></thead><tbody>';
+  f.forEach(fi=>{s+=`<tr><th>${fi===1?'<b>heute</b>':(fi>1?'+':'−')+Math.round(Math.abs(fi-1)*100)+' %'} · ${eurK((p.inv+(p.hasBat?p.invBat:0))*fi)}</th>`;
+    g.forEach(gi=>{const m=model(p,{inv:p.inv*fi,invBat:p.invBat*fi,spg:gi});const ok=m.irr>p.etf/100;
+      const cur=fi===1&&Math.abs(gi-p.spg)<0.01;
+      s+=`<td style="color:${ok?'var(--good)':'var(--bad)'};${cur?'background:var(--sun-soft)':''}">${pct(m.irr)}</td>`;});s+='</tr>';});
+  $('sens').innerHTML=s+'</tbody>';
+}
+
+function drawTable(m){
+  let s='<thead><tr><th>Jahr</th><th>Ertrag kWh</th><th>Eigenverbr. kWh</th><th>Ersparnis</th><th>Einspeisung</th><th>Kosten</th><th>Cashflow</th><th>Kumuliert</th></tr></thead><tbody>';
+  s+=`<tr><td>0</td><td></td><td></td><td></td><td></td><td class="neg">${eur(-m.I)}</td><td class="neg">${eur(-m.I)}</td><td class="neg">${eur(-m.I)}</td></tr>`;
+  m.rows.forEach(r=>{s+=`<tr><td>${r.t}</td><td>${Math.round(r.Y).toLocaleString('de-DE')}</td><td>${Math.round(r.ev).toLocaleString('de-DE')}</td><td>${eur(r.sEv)}</td><td>${eur(r.sFe)}</td><td class="neg">${eur(-(r.opex+r.repl))}${r.repl>0?' *':''}</td><td class="${r.cf<0?'neg':''}">${eur(r.cf)}</td><td class="${r.cum<0?'neg':''}">${eur(r.cum)}</td></tr>`;});
+  $('yt').innerHTML=s+'</tbody><tfoot><tr><td colspan="8" style="text-align:left;font-family:var(--f-body);color:var(--muted)">* inkl. Tausch Wechselrichter bzw. Speicher</td></tr></tfoot>';
+}
+
+function render(){
+  const p=getInputs();const m=model(p);
+  $('kInv').textContent=eur(m.I);
+  $('kInvS').textContent=(m.I/Math.max(p.kwp,0.1)).toLocaleString('de-DE',{maximumFractionDigits:0})+' €/kWp';
+  $('kPay').textContent=m.pay!=null?m.pay.toLocaleString('de-DE',{maximumFractionDigits:1})+' J.':'nie';
+  $('kIrr').textContent=pct(m.irr);
+  const beat=m.irr>p.etf/100;
+  $('kIrrP').innerHTML=`<span class="pill ${beat?'good':'bad'}">${beat?'über':'unter'} ETF (${p.etf.toLocaleString('de-DE')} %)</span>`;
+  $('kNpv').textContent=eur(m.npv);$('kNpv').className='v'+(m.npv<0?' neg':'');
+  $('kNpvS').textContent='abgezinst mit ETF-Rendite';
+  const y1=m.rows[0];
+  const diff=m.finA-m.finB;
+  $('verdict').innerHTML=`Im ersten Jahr bringt die Anlage <b>${eur(y1.sEv+y1.sFe)}</b> (davon ${eur(y1.sEv)} Stromersparnis, ${eur(y1.sFe)} Einspeisung). Über ${m.N} Jahre kommen <b>${eur(m.sum)}</b> netto zurück. `+
+    (diff>=0?`Gegenüber dem ETF liegt die PV am Ende um <b>${eur(diff)}</b> vorn.`:`Ein ETF mit ${p.etf.toLocaleString('de-DE')} % wäre am Ende um <b>${eur(-diff)}</b> besser. Das Argument für die PV sind dann Preisstabilität und Unabhängigkeit, nicht die Rendite.`);
+  drawCf(m);drawW(m);drawSens(p);drawTable(m);
+  $('invBat').disabled=$('batYear').disabled=$('batCost').disabled=!p.hasBat;
+  try{localStorage.setItem('pvw-inputs',JSON.stringify(p));}catch(e){}
+  $('permaUrl').value=BASE+'#'+encode(p);try{history.replaceState(null,'','#'+encode(p));}catch(e){}$('permaOk').textContent='';
+}
+
+const BASE=location.href.split('#')[0];
+function encode(p){return 'p'+ids.map(k=>typeof p[k]==='boolean'?(p[k]?1:0):String(+p[k].toFixed(3))).join('_');}
+function decode(h){
+  const s=(h||'').replace(/^#/,'');if(!/^p[0-9._~-]+$/.test(s))return null;
+  const parts=s.slice(1).split('_');if(parts.length!==ids.length)return null;
+  const o={};for(let i=0;i<ids.length;i++){const v=parseFloat(parts[i]);if(!isFinite(v))return null;o[ids[i]]=typeof PRESETS.eigenbau[ids[i]]==='boolean'?v===1:v;}
+  return o;
+}
+$('permaBtn').addEventListener('click',()=>{
+  const el=$('permaUrl');const done=()=>{$('permaOk').textContent='Kopiert';};
+  const fallback=()=>{el.focus();el.select();$('permaOk').textContent='Markiert';};
+  try{navigator.clipboard.writeText(el.value).then(done,fallback);}catch(e){fallback();}
+});
+$('permaUrl').addEventListener('focus',e=>e.target.select());
+
+document.getElementById('presets').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  setInputs(PRESETS[b.dataset.p]);
+  document.querySelectorAll('#presets button').forEach(x=>x.classList.toggle('on',x===b));
+  render();
+});
+F.addEventListener('input',()=>{document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('on'));render();});
+F.addEventListener('submit',e=>e.preventDefault());
+
+let start=PRESETS.eigenbau,fromStore=false;
+const fromHash=decode(location.hash);
+if(fromHash){start=fromHash;fromStore=true;}
+else try{const s=JSON.parse(localStorage.getItem('pvw-inputs')||'null');if(s&&typeof s.kwp==='number'){start={...PRESETS.eigenbau,...s};fromStore=true;}}catch(e){}
+setInputs(start);
+if(!fromStore)document.querySelector('#presets button[data-p="eigenbau"]').classList.add('on');
+render();
+</script>
+
+</body>
+</html>
